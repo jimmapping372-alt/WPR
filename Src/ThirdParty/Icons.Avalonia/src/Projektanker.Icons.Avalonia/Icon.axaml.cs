@@ -6,7 +6,7 @@ using Avalonia.Media;
 
 namespace Projektanker.Icons.Avalonia
 {
-    public partial class Icon : TemplatedControl
+    public class Icon : TemplatedControl
     {
         public static readonly DirectProperty<Icon, DrawingImage> DrawingImageProperty =
             AvaloniaProperty.RegisterDirect<Icon, DrawingImage>(nameof(DrawingImage), o => o.DrawingImage);
@@ -52,9 +52,8 @@ namespace Projektanker.Icons.Avalonia
 
         private void OnValueChanged()
         {
-            //RnD
-            //var iconProvider = AvaloniaLocator.Current.GetService<IIconReader>();
-            string path = "";//iconProvider.GetIconPath(Value);
+            var iconProvider = AvaloniaLocator.Current.GetService<IIconReader>();
+            string path = iconProvider.GetIconPath(Value);
             var drawing = new GeometryDrawing()
             {
                 Geometry = Geometry.Parse(path),

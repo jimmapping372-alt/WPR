@@ -18,26 +18,27 @@ namespace WPR.Common
 
         public static void Initialize(object hostControl = null)
         {
-#if __ANDROID__
-            NotificationManager = new AndroidNotificationManager((hostControl as Android.Content.Context)!);
-#else
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                NotificationManager = new FreeDesktopNotificationManager();
-            } 
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+//#if __ANDROID__
+//            NotificationManager = new AndroidNotificationManager((hostControl as Android.Content.Context)!);
+//#else
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 NotificationManager = new WindowsNotificationManager();
             }
+            //else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            //{
+            //    NotificationManager = new FreeDesktopNotificationManager();
+            //}
             //else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             //{
             //   NotificationManager = new AppleNotificationManager();
-            //} else 
+            //} 
+            else 
             {
-                //throw new PlatformNotSupportedException();
-                NotificationManager = new WindowsNotificationManager();
+                throw new PlatformNotSupportedException();
+                //NotificationManager = new WindowsNotificationManager();
             }
-#endif
+//#endif
             NotificationManager.Initialize();
         }
     }

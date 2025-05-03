@@ -30,8 +30,8 @@ namespace WPR.UI.Views
                 _ = NativeUI.NotificationManager.ShowNotification(new DesktopNotifications.Notification()
                 {
                     Title = Properties.Resources.LaunchingInProcess,
-                    Body = args.Target.Name!,
-                    ImagePath = Configuration.Current!.DataPath(args.Target.IconPath)
+                    Body = args.Target.Name!, 
+                    //ImagePath = Configuration.Current!.DataPath(args.Target.IconPath)
                 }, expirationTime: DateTime.Now + TimeSpan.FromSeconds(5));
 
                 bool runOk = true;

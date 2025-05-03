@@ -1,19 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup Condition=" '$(OS)' != 'Windows_NT' ">
-	<TargetFrameworks>net7.0-android</TargetFrameworks>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(OS)' == 'Windows_NT' ">
-	<TargetFrameworks>net7.0</TargetFrameworks>
-  </PropertyGroup>
-  
   <PropertyGroup>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
+	<TargetFrameworks>net8.0-windows10.0.26100.0</TargetFrameworks>
+	  <Nullable>enable</Nullable>
   </PropertyGroup>
-  
   <ItemGroup>
-    <ProjectReference Include="$(SolutionDir)\ThirdParty\fna\FNA.Core.csproj" />
+    <ProjectReference Include="$(SolutionDir)\ThirdParty\fna\FNA.Core.csproj"/>
   </ItemGroup>
-
 </Project>

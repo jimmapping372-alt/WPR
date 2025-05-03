@@ -7,7 +7,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.IsolatedStorage;
 using System.Runtime.Serialization;
-
 using WPR.Common;
 
 namespace WPR.WindowsCompability
