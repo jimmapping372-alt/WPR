@@ -34,10 +34,18 @@ namespace WPR.UI.ViewModels
         {
             get
             {
+                _Icon = default;
+
                 if (_Icon == null)
                 {
-                    _Icon = Bitmap.DecodeToWidth(new FileStream(Configuration.Current!.DataPath(_App.IconPath), FileMode.Open, FileAccess.Read, FileShare.Read),
-                        IconSize);
+                    try
+                    {
+                        var iconpath = Configuration.Current!.DataPath(_App.IconPath);
+                        var fs = new FileStream(iconpath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                        _Icon = Bitmap.DecodeToWidth(fs,
+                            IconSize);
+                    }
+                    catch { }
                 }
 
                 return _Icon;

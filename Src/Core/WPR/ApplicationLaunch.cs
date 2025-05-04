@@ -39,7 +39,7 @@ namespace WPR
                     path = loadContext.LoadFromAssemblyPath(
                         Path.Combine(CurrentProductFolder, name.Name + ".dll"));
                 }
-                catch (Exception ex)
+                catch// (Exception ex)
                 {
                     //Debug.WriteLine("[warn] loadContext.LoadFromAssemblyPath ex.: " + ex.Message);
                 }
@@ -51,7 +51,7 @@ namespace WPR
 
         public static async Task Start
         (
-            Application app, Action<DisplayOrientation>? requestOrientation = null
+            Application app, Action<DisplayOrientation>? requestOrientation = default//null
         )
         {
             if (app.ApplicationType != ApplicationType.XNA)
@@ -82,8 +82,9 @@ namespace WPR
             //using (Game? obj = Activator.CreateInstance(mainType!) as Game)
             using (Game obj = Activator.CreateInstance(mainType) as Game)
             {
-                //obj!.IsMouseVisible = true;
-                obj.IsMouseVisible = true;
+                //RnD
+                //obj.IsMouseVisible = true;
+                obj!.IsMouseVisible = true;
 
                 obj!.Window.Title =
                       $"WPR - {app.Name}";// - {app.Author} (Publisher: {app.Publisher})";

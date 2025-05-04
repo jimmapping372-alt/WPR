@@ -13,6 +13,7 @@ namespace WPR.Common
         {
             Write(category, content);
         }
+
         public static void Warn(LogCategory category, String content)
         {
             Write(category, content);

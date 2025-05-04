@@ -1,19 +1,45 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace Microsoft.Phone.Shell
 {
     public class ShellTileData
     {
-        public void set_Title(ShellTileData data)
+        public static List<ShellTileData> _ShellTileData;
+        public static ShellTileData data = new ShellTileData();
+
+        public string Name;
+        public bool IsEnabled;
+
+
+
+        static ShellTileData()
         {
-            Debug.WriteLine("[i] ShellTileData set_Title data : " + data);
+            _ShellTileData = new List<ShellTileData>()
+            {
+                new ShellTileData() 
+                {
+                    Name = "Test",
+                    IsEnabled = true
+                }
+            };
         }
 
         //RnD
         public void set_Title(string text)
         {
-            Debug.WriteLine("[i] ShellTileData text : " + text);
+            ShellTile.tile.Title = text;
+            Debug.WriteLine("[i] ShellTileData set_Title text : " + text);
         }
+
+
+        //RnD
+        /*public void set_Title(ShellTileData data)
+        {
+            //RnD
+            //ShellTile.tile.Title = data;
+            Debug.WriteLine("[i] ShellTileData set_Title data : " + data);
+        }*/
     }
 }

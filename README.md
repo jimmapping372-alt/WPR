@@ -1,14 +1,16 @@
-# WPR 0.0.7-alpha :: dev branch
+# WPR 0.0.8-alpha :: dev branch
 ![](Images/logo.png)
 
 WPR is a WP7-8 XNA app runner. This is only my fork of [WPR](https://github.com/8212369/WPR), not the original. 
 
 ## Screenshots
-![WPR](Images/sshot01.png)
-![IloMilo](Images/sshot02.png)
+![WPR main screen](Images/sshot01.png)
+![Acedia menu](Images/sshot02.png)
+![Acedia gmeplay](Images/sshot03.png)
+
 
 ## Status
-- I started experimenting with .NET 8 & Avalonia 11. 
+- I started experimenting with .NET 8 & Avalonia 11. Acedia: Indie Horror game start&running fixed I hope).
 - All Android-related parts of WPR code are deleted. Android code available only in/at obsolete *master* branch.
 - Thinking of/about switch from Avalonia to Uno / Xamarin Forms / MAUI...
 
@@ -19,7 +21,7 @@ WPR is a WP7-8 XNA app runner. This is only my fork of [WPR](https://github.com/
 ## Bugs and mini-FAQs
 - Some games will requre touch screen. In WPR 0.0.7, touch taps emulation (via mouse) is not full (or not present, idk). Example: Skulls of the Shogun.
 - Some games have not full screen (or only part of Windowed zone). Example: Zuma Revenge!
-- Some games can't install because of no WMAppManifest.xml inside xap file. Ho to fix: rename .xap to .zip, and fix WMAppManifest.xml data. For example, use WMAppManifest.xml from EarthWormJim, and patch attributes:
+- Some games can't install because of no WMAppManifest.xml inside xap file. Ho to fix: rename .xap to .zip, and fix WMAppManifest.xml data. For example, I used WMAppManifest.xml (from EarthWormJim.xap) to patch attributes in ZumaRevenge.xap:
 ```
 <?xml version="1.0" encoding="utf-16"?>
 <Deployment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" AppPlatformVersion="7.0" xmlns="http://schemas.microsoft.com/windowsphone/2009/deployment">
