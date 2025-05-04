@@ -14,14 +14,12 @@ WPR is a WP7-8 XNA app runner. This is only my fork of [WPR](https://github.com/
 
 ## Tech. details
 - Newest VS 2022 Preview used to "assemble" (build) this "dev branch"
-- I think that WPR "dev edition" incompatible with Win10 becouse of .NET 8... So, fresh Windows 11 OS needed to run WPR-0.0.7 (Some Tiny 11 is only good event for retro-notebooks)))
+- I think that WPR "dev edition" incompatible with Win10 because of .NET 8... So, fresh Windows 11 OS needed to run WPR-0.0.7 (however, some reduced Windows 11 Tiny is goode choice even for 15-year-old retro-notebooks... Sony Vaio, etc.)))
 
 ## Bugs and mini-FAQs
 - Some games will requre touch screen. In WPR 0.0.7, touch taps emulation (via mouse) is not full (or not present, idk). Example: Skulls of the Shogun.
 - Some games have not full screen (or only part of Windowed zone). Example: Zuma Revenge!
-- Some games can't install because of no WMAppManifest.xml inside xap file. 
-
-Ho to fix: rename .xap to .zip, and fix WMAppManifest.xml data. For example, use WMAppManifest.xml from EarthWormJim, and patch attributes:
+- Some games can't install because of no WMAppManifest.xml inside xap file. Ho to fix: rename .xap to .zip, and fix WMAppManifest.xml data. For example, use WMAppManifest.xml from EarthWormJim, and patch attributes:
 ```
 <?xml version="1.0" encoding="utf-16"?>
 <Deployment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" AppPlatformVersion="7.0" xmlns="http://schemas.microsoft.com/windowsphone/2009/deployment">
@@ -51,7 +49,7 @@ Ho to fix: rename .xap to .zip, and fix WMAppManifest.xml data. For example, use
 ```
 
 ## ToDo
-- Create Wiki section
+- Actualize Wiki section
 - Transtale Readme to RU and CN
 - Fix resolution scaling...
 - Port this "app creature" into Xamarin Forms or Uno "multi-platform engine" :)
