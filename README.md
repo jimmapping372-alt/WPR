@@ -5,7 +5,7 @@ WPR is a WP7-8 XNA app runner. This is only my fork of [WPR](https://github.com/
 
 ## Screenshots
 ![WPR](Images/sshot01.png)
-![IloMilo](Images/sshot01.png)
+![IloMilo](Images/sshot02.png)
 
 ## Status
 - I started experimenting with .NET 8 & Avalonia 11. 
