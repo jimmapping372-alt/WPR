@@ -2147,11 +2147,14 @@ public static class FAudio
 
 		try
 		{
-			song = XNA_PlaySong(Utf8Encode(name, utf8Buf, utf8BufSize));
+            byte* encodedName = Utf8Encode(name, utf8Buf, utf8BufSize);
+
+            song = XNA_PlaySong(encodedName);
 		}
-		catch (Exception ex)
-		{
-			Debug.WriteLine("XNA_PlaySong ex: " + ex.Message);
+		catch 
+		{ 
+		
+			Debug.WriteLine("[ex] FNA.Core FAudio: XNA_PlaySong exception (possible, memory corrupt) !");
 		}
         return song;
 	}

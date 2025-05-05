@@ -22,7 +22,6 @@
     <ProjectReference Include="$(SolutionDir)\Core\WPR.WindowsCompability\WPR.WindowsCompability.csproj" />
     <ProjectReference Include="$(SolutionDir)\Core\WPR.XnaCompabilityPatch\WPR.XnaCompability.csproj" />
     <ProjectReference Include="$(SolutionDir)\Core\WPR.StandardCompability\WPR.StandardCompability.csproj" />
-    <ProjectReference Include="..\Microsoft.Xna.Framework.GamerServicesExtensions\Microsoft.Xna.Framework.GamerServicesExtensions.csproj" />
     <ProjectReference Include="..\Microsoft.Xna.Framework.GamerServices\Microsoft.Xna.Framework.GamerServices.csproj" />
     <ProjectReference Include="..\WPR.Common\WPR.Common.csproj" />
   </ItemGroup>

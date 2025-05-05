@@ -38,8 +38,21 @@ namespace Microsoft.Phone.Shell
 
         public void HandleApplicationExit()
         {
-            Deactivated?.Invoke(this, new DeactivatedEventArgs());
-            Closing?.Invoke(this, new ClosingEventArgs());
+            try
+            {
+                /*Deactivated?.Invoke(this, new DeactivatedEventArgs());
+                Closing?.Invoke(this, new ClosingEventArgs());*/
+
+                var dArgs = new DeactivatedEventArgs();
+                Deactivated.Invoke(this, dArgs);
+
+                var cArgs = new ClosingEventArgs();
+                Closing.Invoke(this, cArgs);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[ex] PhoneApplicationService - HandleApplicationExit ex.: " + ex.Message);
+            }
 
             // Recycle
             Current = new PhoneApplicationService();

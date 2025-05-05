@@ -1,14 +1,21 @@
-﻿using System;
+﻿using Microsoft.Xna.Framework.GamerServices;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-
+using System.IO.IsolatedStorage;
 using WPR.Common;
+using WPR.WindowsCompability;
+
+
+
 
 namespace Microsoft.Xna.Framework.GamerServices
 {
     public class LeaderboardReader
     {
         private ReadOnlyCollection<LeaderboardEntry>? _Entries;
+        //private static LeaderboardReader _LeaderboardReader;
+
         public ReadOnlyCollection<LeaderboardEntry>? Entries
         {
             get
@@ -17,10 +24,36 @@ namespace Microsoft.Xna.Framework.GamerServices
             }
         }
 
+        public bool CanPageDown
+        {
+            get
+            {
+                return true;//false;
+            }
+        }
+        public bool CanPageUp
+        {
+            get
+            {
+                return true;// false;
+            }
+        }
+
         public LeaderboardReader()
         {
             _Entries = new ReadOnlyCollection<LeaderboardEntry>(new List<LeaderboardEntry>());
         }
+
+        public LeaderboardReader(
+         LeaderboardIdentity leaderboardId,
+         Gamer pivotGamer,
+         int pageSize) : base()
+        {
+            //_Entries = new ReadOnlyCollection<LeaderboardEntry>(new List<LeaderboardEntry>());
+            //_LeaderboardReader = Read(leaderboardId, pivotGamer, pageSize);
+        }
+
+
 
         public void Dispose()
         {
@@ -37,12 +70,27 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             return StubUtils.ForeverTask;
         }
+
+       
+
+        //RnD
+        public static LeaderboardReader Read(
+         LeaderboardIdentity leaderboardId,
+         Gamer pivotGamer,
+         int pageSize)
+        {
+            return new LeaderboardReader(); //StubUtils.ForeverTask;
+        }
+
+
+
         public static IAsyncResult BeginRead(LeaderboardIdentity leaderb,
             int pageStart, int pageSize, AsyncCallback callback, object asyncState)
         {
             return StubUtils.ForeverTask;
         }
 
+      
         public static IAsyncResult BeginRead(
           LeaderboardIdentity leaderboardId,
           Gamer pivotGamer,
@@ -63,5 +111,6 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             return StubUtils.ForeverTask;
         }
+               
     }
 }

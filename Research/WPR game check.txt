@@ -78,3 +78,34 @@ Unplayable (4 games)
 Not Working (5 games)
 
 *Gave (to Thetouchedjoe and "WPR community") comments at https://github.com/8212369/WPR/issues/, if this list having put wrong labels or everything.
+
+-----
+AirShip Challenge not working / unplayable (black screen only!)
+***
+Arkkanpod 7 not working / unplayable
+
+Application encountered an unexpected error while executing. Please check the log for more detailed info!. StackTrace: System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation.
+ ---> System.ArgumentOutOfRangeException: Index and length must refer to a location within the string. (Parameter 'length')
+   at System.String.ThrowSubstringArgumentOutOfRange(Int32 startIndex, Int32 length)
+   at System.String.Substring(Int32 startIndex, Int32 length)
+   at ScoreApi.Core.UniqueIdStrategy.GetUniqueId()
+   at ScoreApi.ScoreClient..ctor(String game, String secret)
+   at BreakOutGame.Game1..ctor()
+   at System.RuntimeType.CreateInstanceDefaultCtor(Boolean publicOnly, Boolean wrapExceptions)
+   --- End of inner exception stack trace ---
+   at System.RuntimeType.CreateInstanceDefaultCtor(Boolean publicOnly, Boolean wrapExceptions)
+   at WPR.ApplicationLaunch.Start(Application app, Action`1 requestOrientation) in C:\Users\Admin\source\repos\!WPR\WPR-dev\Src\Core\WPR\ApplicationLaunch.cs:line 89
+   at WPR.UI.Views.MainWindowDesktop.<.ctor>b__1_0(Object sender, ApplicationLaunchRequestArgs args) in C:\Users\Admin\source\repos\!WPR\WPR-dev\Src\UI\WPR.UI\Views\MainWindowDesktop.axaml.cs:line 55
+***
+
+Breakout not working / unplayable
+***
+Microsoft.Phone.Tasks.EmailComposeTask
+***
+
+BulletAsylum unplayable
+***
+System.MissingMethodException: 'Method not found: 'Microsoft.Xna.Framework.GamerServices.LeaderboardReader Microsoft.Xna.Framework.GamerServices.LeaderboardReader.Read(Microsoft.Xna.Framework.GamerServices.LeaderboardIdentity, Microsoft.Xna.Framework.GamerServices.Gamer, Int32)'.'
+
+Method not found: 'Boolean Microsoft.Xna.Framework.GamerServices.LeaderboardReader.get_CanPageUp()'.
+***

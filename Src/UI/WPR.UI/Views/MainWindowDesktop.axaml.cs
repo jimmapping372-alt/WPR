@@ -27,13 +27,21 @@ namespace WPR.UI.Views
             {
                 Hide();
 
-                _ = NativeUI.NotificationManager.ShowNotification(new DesktopNotifications.Notification()
+                try
                 {
-                    Title = Properties.Resources.LaunchingInProcess,
-                    Body = args.Target.Name!, 
-                    //ImagePath = Configuration.Current!.DataPath(args.Target.IconPath)
-                }, expirationTime: DateTime.Now + TimeSpan.FromSeconds(5));
-
+                    _ = NativeUI.NotificationManager.ShowNotification(new DesktopNotifications.Notification()
+                    {
+                        Title = Properties.Resources.LaunchingInProcess,
+                        Body = args.Target.Name!,
+                        BodyImagePath = Configuration.Current!.DataPath(args.Target.IconPath),//ImagePath = Configuration.Current!.DataPath(args.Target.IconPath)
+                        BodyImageAltText = "BodyImageAltText"
+                    }, expirationTime: DateTime.Now + TimeSpan.FromSeconds(5));
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("[ex] ShowNotification ex.: " + ex.Message, "; StackTrace: " + ex.StackTrace);
+                }
+                
                 bool runOk = true;
 
                 var test = JsonConvert.SerializeObject(args.Target);
@@ -44,7 +52,7 @@ namespace WPR.UI.Views
 
                 try
                 {
-                    await ApplicationLaunch.Start(args.Target);
+                    await ApplicationLaunch.Start(args.Target, default);
                 }
                 catch (Exception ex)
                 {

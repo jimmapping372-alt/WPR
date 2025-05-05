@@ -34,7 +34,7 @@ namespace WPRTests
 
             try
             {
-                await ApplicationLaunch.Start(args.Target);
+                await ApplicationLaunch.Start(args.Target, default);
             }
             catch (Exception ex)
             {

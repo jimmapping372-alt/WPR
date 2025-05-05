@@ -17,7 +17,7 @@ namespace Microsoft.Phone.Info
             switch (propertyName)
             {
                 case "ANID":
-                    return "123456789";
+                    return "1234567890123456789012345678901234567890";
 
                 default:
                     //RnD

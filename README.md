@@ -1,4 +1,4 @@
-# WPR 0.0.8.1-alpha :: dev branch
+# WPR 0.0.9-alpha :: dev branch
 ![](Images/logo.png)
 
 WPR is a WP7-8 XNA app runner. This is only my fork of [WPR](https://github.com/8212369/WPR), not the original. 
@@ -8,11 +8,19 @@ WPR is a WP7-8 XNA app runner. This is only my fork of [WPR](https://github.com/
 ![Acedia menu](Images/sshot02.png)
 ![Acedia gmeplay](Images/sshot03.png)
 ![Mirror's Edge](Images/sshot04.png)
+![AirShip_Challenge](Images/sshot05.png)
+![Asphalt 5](Images/sshot06.png)
+
 
 ## Status
-- I started experimenting with .NET 8 & Avalonia 11. Mirror's Edge : fixed (I hope!) 
+- I started experimenting with .NET 8 & Avalonia 11. 
+- Mirror's Edge, Breakout & Arrkanoid7 fixed (I hope!) 
+- Asphalt 5 improved a little (but I have not accelemometer at now... so, 50 / 50 ! )
+- AirShip_Challenge -- only black screen (cryptographic functions emulation damaged.. idk)
+- BulletAsylum -- 50 / 50 (strange memory viol. access when start level + change song /music play! )
 - All Android-related parts of WPR code are deleted. Android code available only in/at obsolete *master* branch.
 - Thinking of/about switch from Avalonia to Uno / Xamarin Forms / MAUI...
+- Desktop notification improved ("game icon big preview")))
 
 ## Tech. details
 - Newest VS 2022 Preview used to "assemble" (build) this "dev branch"

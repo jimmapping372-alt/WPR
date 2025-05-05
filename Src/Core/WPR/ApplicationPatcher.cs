@@ -244,6 +244,10 @@ namespace WPR
                 //},
 
                 // RnD ***************************************
+                //{
+                //    "Microsoft.Xna.Framework.GamerServices.LeaderboardReader Microsoft.Xna.Framework.GamerServices.LeaderboardReader::Read(Microsoft.Xna.Framework.GamerServices.LeaderboardIdentity, Microsoft.Xna.Framework.GamerServices.Gamer, Int32)",
+                //    typeof(Microsoft.Xna.Framework.GamerServices2.LeaderboardReader)
+                //},
                 {
                     "System.String Microsoft.Phone.Info.DeviceStatus::get_DeviceName()",
                     typeof(WPR.WindowsCompability.DeviceStatus)

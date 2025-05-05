@@ -49,11 +49,16 @@ namespace WPR
             };
         }
 
-        public static async Task Start
+        // Start
+                        //Temp
+        public static /*async*/ Task Start
         (
-            Application app, Action<DisplayOrientation>? requestOrientation = default//null
+            Application app, Action<DisplayOrientation>? requestOrientation/* = default*///null
         )
         {
+            //
+            requestOrientation = default;
+
             if (app.ApplicationType != ApplicationType.XNA)
             {
                 //throw new NotSupportedException("Only XNA app is supported!");
@@ -139,11 +144,12 @@ namespace WPR
 
                     try
                     {
-                        PhoneApplicationService.Current!.HandleApplicationExit();
+                       //PhoneApplicationService.Current!.HandleApplicationExit();
+                        PhoneApplicationService.Current.HandleApplicationExit();
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"[ex] HandleApplicationExit ex. : {ex.Message}");
+                        //Debug.WriteLine($"[ex] HandleApplicationExit ex. : {ex.Message}");
                         Log.Warn(LogCategory.AppList, $"Ignored clean-up exception:\n {ex.Message}");
                     }
                     
@@ -156,7 +162,10 @@ namespace WPR
                         Debug.WriteLine($"[ex] obj.Exit ex. : {ex.Message}");
                     }
                 }
-            //}); //
-        }
+            //}); 
+            
+            //Temp
+            return Task.CompletedTask;
+        }//Start
     }
 }

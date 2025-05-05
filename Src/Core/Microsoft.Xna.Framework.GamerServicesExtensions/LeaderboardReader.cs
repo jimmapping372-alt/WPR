@@ -1,10 +1,11 @@
-﻿using System;
+﻿using Microsoft.Xna.Framework.GamerServices;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
 using WPR.Common;
 
-namespace Microsoft.Xna.Framework.GamerServices
+namespace Microsoft.Xna.Framework.GamerServicesExt
 {
     public class LeaderboardReader
     {
@@ -29,14 +30,25 @@ namespace Microsoft.Xna.Framework.GamerServices
             return;
         }
 
-        public IAsyncResult BeginPageDown(AsyncCallback callback, object asyncState)
+        public static IAsyncResult BeginPageDown(AsyncCallback callback, object asyncState)
         {
             return StubUtils.ForeverTask;
         }
-        public IAsyncResult BeginPageUp(AsyncCallback callback, object asyncState)
+        
+        public static IAsyncResult BeginPageUp(AsyncCallback callback, object asyncState)
         {
             return StubUtils.ForeverTask;
         }
+
+        //RnD
+        public static IAsyncResult Read(
+         LeaderboardIdentity leaderboardId,
+         Gamer1 pivotGamer,
+         int pageSize)
+        {
+            return StubUtils.ForeverTask;
+        }
+
         public static IAsyncResult BeginRead(LeaderboardIdentity leaderb,
             int pageStart, int pageSize, AsyncCallback callback, object asyncState)
         {

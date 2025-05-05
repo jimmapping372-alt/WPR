@@ -92,8 +92,21 @@ namespace WPR.WindowsCompability
 
         public object this[string key]
         {
-            get => _Settings[key];
-            set => _Settings[key] = value;
+            get
+            {
+                //return _Settings[key];
+                if (!_Settings.ContainsKey(key))
+                {
+                    return default;//null;
+                }
+
+                return _Settings[key];
+            }
+
+            set
+            {
+                _Settings[key] = value;
+            }
         }
 
         public object? this[object key]

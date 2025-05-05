@@ -62,6 +62,9 @@ namespace Microsoft.Phone.Info
                 case "DeviceStatus":
                     return "ok";//default;
 
+                case "DeviceUniqueId": // A byte array. 20 bytes in length.
+                    return "12345678901234567890";
+
                 default:
                     return null;
             }
