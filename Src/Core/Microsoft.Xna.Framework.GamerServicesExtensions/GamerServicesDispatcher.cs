@@ -20,15 +20,23 @@ namespace Microsoft.Xna.Framework.GamerServices
 
         public static bool IsInitialized => true;
 
+        private static IntPtr _WindowsHandle;
         public static IntPtr WindowHandle
         {
             get
             {
-                throw new NotImplementedException();
+                return _WindowsHandle;
             }
             set
             {
-                throw new NotImplementedException();
+                if (_WindowsHandle == null)
+                {
+                    _WindowsHandle = value;
+                }
+                else
+                {
+                    throw new InvalidOperationException("WindowHandle can only be set once.");
+                }
             }
         }
     }

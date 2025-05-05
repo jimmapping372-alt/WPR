@@ -4,11 +4,29 @@ namespace Microsoft.Phone.Info
 {
     public class DeviceExtendedProperties
     {
+        public DeviceExtendedProperties()
+        {
+        }
+
         public static bool TryGetValue(string propertyName, out Object propertyValue)
         {
             propertyValue = GetValue(propertyName);
             return true;
         }
+
+        public static string DeviceManufacturer
+        {
+            get
+            {
+                return "Microsoft";
+            }
+        }
+
+        //public string get_DeviceManufacturer()
+        //{
+        //    string ManufacturerName = "WPRunner";//"Microsoft";
+        //    return ManufacturerName;
+        //}
 
         public static Object? GetValue(string property)
         {
@@ -42,7 +60,7 @@ namespace Microsoft.Phone.Info
                     return 2048L * 1024 * 1024;
 
                 case "DeviceStatus":
-                    return default;
+                    return "ok";//default;
 
                 default:
                     return null;

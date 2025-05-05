@@ -12,7 +12,30 @@ namespace Microsoft.Phone.Shell
         public string Name;
         public bool IsEnabled;
 
+        /*public string Title 
+        {
+            get 
+            {
+                if (_ShellTileData == null)
+                {
+                    _ShellTileData = new List<ShellTileData>()
+                    {
+                        new ShellTileData()
+                        {
+                            Name = "Test",
+                            IsEnabled = true
+                        }
+                    };
+                }
 
+                return _ShellTileData[0].Title; 
+            }
+            //set 
+            //{
+            //    //_ShellTileData[0].Title = value;
+            //    ShellTile.tile.Title = data.Title;
+            //} 
+        }*/
 
         static ShellTileData()
         {
@@ -24,6 +47,8 @@ namespace Microsoft.Phone.Shell
                     IsEnabled = true
                 }
             };
+
+            data = _ShellTileData[0];
         }
 
         //RnD

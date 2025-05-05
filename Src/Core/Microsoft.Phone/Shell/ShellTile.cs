@@ -14,10 +14,6 @@ namespace Microsoft.Phone.Shell
 
         static ShellTile()
         {
-            // _ActiveTiles = new List<ShellTile>()
-            // {
-            //
-            // };
             _ActiveTiles = new List<ShellTile>()
             {
                 new ShellTile { Name = "HomeTile", Title = "123", IsEnabled = true },
@@ -39,11 +35,7 @@ namespace Microsoft.Phone.Shell
       
         public void Update(ShellTileData data)
         {
-            tile =  ShellTile.ActiveTiles.FirstOrDefault();
-            //if (tile != null)
-            //{
-            //    tile.Update(data);
-            //}
+            tile =  ShellTile.ActiveTiles.FirstOrDefault();           
         }
     }
 }

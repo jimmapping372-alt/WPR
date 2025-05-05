@@ -76,6 +76,7 @@ namespace WPR
             //Type? mainType = assem.GetType(app.EntryPoint);
             Type mainType = assem.GetType(app.EntryPoint);
 
+            // RnD / TEST / DEBUG
             // Run on separate thread to not affect the UI
             //await Task.Run(() =>
             //{
@@ -155,7 +156,7 @@ namespace WPR
                         Debug.WriteLine($"[ex] obj.Exit ex. : {ex.Message}");
                     }
                 }
-            //});
+            //}); //
         }
     }
 }

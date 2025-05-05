@@ -8,21 +8,33 @@ namespace Microsoft.Phone.Tasks
 {
     public class MarketplaceDetailTask
     {
+        public string ContentIdentifier { get; set; }
+
         private MarketplaceContentType _contentType;
 
         public MarketplaceContentType ContentType
         {
-            get => _contentType;
-            set => _contentType = value;
+            get
+            {
+                if (_contentType == null)
+                {
+                    _contentType = new MarketplaceContentType()
+                    {
+                    };
+                }
+                return _contentType;
+            }
+
+            set
+            {
+                _contentType = value;
+            }
         }
 
         public void Show()
         {
 
         }
-
-        public void set_ContentIdentifier(string str)
-        { 
-        }
+       
     }
 }

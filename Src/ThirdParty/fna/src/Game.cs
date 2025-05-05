@@ -540,7 +540,7 @@ namespace Microsoft.Xna.Framework
 					}
 					catch (Exception ex)
 					{
-						Debug.WriteLine("[ex] (gameTime) " + ex.Message);
+						Debug.WriteLine("[ex] Game (gameTime) error: " + ex.Message);
 					}
 				}
 
@@ -599,8 +599,19 @@ namespace Microsoft.Xna.Framework
 
 				accumulatedElapsedTime = TimeSpan.Zero;
 				AssertNotDisposed();
-				Update(gameTime);
-			}
+
+                // Plan A
+                //Update(gameTime);
+                // Plan B
+                try
+                {
+                    Update(gameTime);
+                }
+                catch (Exception ex2)
+                {
+                    Debug.WriteLine("[ex2] Game (gameTime) error: " + ex2.Message);
+                }
+            }
 
 			// Draw unless the update suppressed it.
 			if (suppressDraw)

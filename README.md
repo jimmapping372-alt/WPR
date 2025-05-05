@@ -1,4 +1,4 @@
-# WPR 0.0.8-alpha :: dev branch
+# WPR 0.0.8.1-alpha :: dev branch
 ![](Images/logo.png)
 
 WPR is a WP7-8 XNA app runner. This is only my fork of [WPR](https://github.com/8212369/WPR), not the original. 
@@ -7,10 +7,10 @@ WPR is a WP7-8 XNA app runner. This is only my fork of [WPR](https://github.com/
 ![WPR main screen](Images/sshot01.png)
 ![Acedia menu](Images/sshot02.png)
 ![Acedia gmeplay](Images/sshot03.png)
-
+![Mirror's Edge](Images/sshot04.png)
 
 ## Status
-- I started experimenting with .NET 8 & Avalonia 11. Acedia: Indie Horror game start&running fixed I hope).
+- I started experimenting with .NET 8 & Avalonia 11. Mirror's Edge : fixed (I hope!) 
 - All Android-related parts of WPR code are deleted. Android code available only in/at obsolete *master* branch.
 - Thinking of/about switch from Avalonia to Uno / Xamarin Forms / MAUI...
 

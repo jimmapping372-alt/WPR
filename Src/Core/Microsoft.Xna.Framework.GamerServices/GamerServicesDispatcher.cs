@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 
 namespace Microsoft.Xna.Framework.GamerServices
@@ -20,7 +21,7 @@ namespace Microsoft.Xna.Framework.GamerServices
 
         public static bool IsInitialized => true;
 
-        public static IntPtr WindowHandle
+        /*public static IntPtr WindowHandle
         {
             get
             {
@@ -29,6 +30,25 @@ namespace Microsoft.Xna.Framework.GamerServices
             set
             {
                 throw new NotImplementedException();
+            }
+        }*/
+        private static IntPtr _WindowsHandle;
+        public static IntPtr WindowHandle
+        {
+            get
+            {
+                return _WindowsHandle;
+            }
+            set
+            {
+                if (_WindowsHandle == null)
+                {
+                    _WindowsHandle = value;
+                }
+                else
+                {
+                    Debug.WriteLine("[i] gamerServices-GamerServicesDispatcher: WindowHandle can only be set once.");
+                }
             }
         }
     }

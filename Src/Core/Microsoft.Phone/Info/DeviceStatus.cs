@@ -7,13 +7,28 @@ namespace Microsoft.Phone.Info
     //    Device,
     //     Emulator
     //}
+
     public class DeviceStatus
     {
-        //public string get_DeviceManufacturer()
-        //{
-        //    string ManufacturerName = "Microsoft";
-        //    return ManufacturerName;
-        //}
+        
+        public static string DeviceManufacturer 
+        {
+            get
+            {
+                return "Microsoft";
+            }
+        }
+
+        public DeviceStatus()
+        {
+            //DeviceManufacturer = "WPRunner";//"Microsoft";
+        }
+
+        /*public string get_DeviceManufacturer()
+        {
+            string ManufacturerName = "WPRunner";//"Microsoft";
+            return ManufacturerName;
+        }*/
 
         public static bool TryGetValue(string propertyName, out Object propertyValue)
         {

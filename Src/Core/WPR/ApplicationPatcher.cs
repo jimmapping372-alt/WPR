@@ -51,13 +51,10 @@ namespace WPR
             
             StandardCompRef = AssemblyNameReference.Parse("WPR.StandardCompability");
 
+            //SystemSecurityCryptographyRef = AssemblyNameReference.Parse("WPR.WindowsCompability");
+            //SystemWindowsMediaImagingRef =  AssemblyNameReference.Parse("WPR.WindowsCompability");
 
-            //SystemSecurityCryptographyRef = AssemblyNameReference.Parse(
-            //    "WPR.WindowsCompability");//!
-
-            //SystemWindowsMediaImagingRef =  AssemblyNameReference.Parse(
-            //    "WPR.WindowsCompability");//!
-
+            // *** Patches ***
             Patches = new Dictionary<string, TypePatchInfo>()
             {
                 { "System.Diagnostics.Stopwatch", new TypePatchInfo()
@@ -246,7 +243,16 @@ namespace WPR
                 //    typeof(WPR.WindowsCompability.WebServices)
                 //},
 
-                //!                
+                // RnD ***************************************
+                {
+                    "System.String Microsoft.Phone.Info.DeviceStatus::get_DeviceName()",
+                    typeof(WPR.WindowsCompability.DeviceStatus)
+                },
+                {
+                    "System.String Microsoft.Phone.Info.DeviceStatus::get_DeviceManufacturer()",
+                    typeof(WPR.WindowsCompability.DeviceStatus)
+                },
+                // *******************************************
                 {
                     "System.Boolean System.IO.IsolatedStorage.IsolatedStorageSettings::TryGetValue(System.String, ByRef)",
                     typeof(WPR.WindowsCompability.IsolatedStorageSettings2)
@@ -260,12 +266,12 @@ namespace WPR
                     "System.Byte[] System.Security.Cryptography.ProtectedData::Protect(System.Byte[],System.Byte[])",
                     typeof(WPR.WindowsCompability.ProtectedData)
                 },
-                 //!
+                 
                 {
                     "System.Byte[] System.Security.Cryptography.ProtectedData::Unprotect(System.Byte[],System.Byte[])",
                     typeof(WPR.WindowsCompability.ProtectedData)
                 },
-                 //!
+                 
                 //{
                 //    "System.Windows.Media.Imaging.WriteableBitmap System.Windows.Media.Imaging.WriteableBitmap(System.Integer,System.Integer)",
                 //    typeof(WPR.WindowsCompability.WriteableBitmap)
