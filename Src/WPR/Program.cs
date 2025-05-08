@@ -16,20 +16,20 @@ namespace WPR
         {
             // Initialize assembly resolver and load target assembly
             AppResolver resolver = new AppResolver();
-            AssemblyDefinition newAsm = AssemblyDefinition.ReadAssembly("C:\\temp\\FNWP72.dll.original");
-            
-            // Load MonoGame framework assembly for reference manipulation
+            AssemblyDefinition newAsm = AssemblyDefinition.ReadAssembly("C:\\temp\\FNWP72.dll.original"); // ("C:\\temp\\FNWP72.dll");
+
+            // Load MonoGame framework assembly for referenceMGCompatibility manipulation
             Assembly assemMono = AssemblyLoadContext.Default.LoadFromAssemblyName(
                 new AssemblyName("MonoGame.Framework"));
 
             // Prepare references for compatibility patches
             
-            AssemblyNameReference reference = AssemblyNameReference.Parse("WPR.MonoGameCompability");
+            AssemblyNameReference referenceMGCompatibility = AssemblyNameReference.Parse("WPR.MonoGameCompability");
             AssemblyNameReference referenceRuntime = AssemblyNameReference.Parse("System.Runtime");
-            AssemblyNameReference referenceGamerServices = AssemblyNameReference.Parse("Microsoft.Xna.Framework.GamerServices");
+            //AssemblyNameReference referenceGamerServices = AssemblyNameReference.Parse("Microsoft.Xna.Framework.GamerServices");
 
             DefaultAssemblyResolver resolver22 = new DefaultAssemblyResolver();
-            AssemblyDefinition patchMono = resolver22.Resolve(reference);
+            AssemblyDefinition patchMono = resolver22.Resolve(referenceMGCompatibility);
 
             if (newAsm == null)
             {
@@ -56,7 +56,7 @@ namespace WPR
             {
                 if ( refer.Name.Contains("Microsoft.Xna") && (!refer.Name.Contains("GamerServices")))
                 {
-                    // Replace XNA assembly reference with MonoGame equivalent
+                    // Replace XNA assembly referenceMGCompatibility with MonoGame equivalent
                     refer.Name = assemMono.GetName().Name;
                     refer.Version = assemMono.GetName().Version;
                     refer.PublicKey = assemMono.GetName().GetPublicKey();
@@ -65,7 +65,7 @@ namespace WPR
 
             // Add compatibility framework references to target assembly
             Mono.Collections.Generic.Collection<TypeDefinition> typess = patchMono.MainModule.Types;
-            module.AssemblyReferences.Add(reference);
+            module.AssemblyReferences.Add(referenceMGCompatibility);
             module.AssemblyReferences.Add(referenceRuntime);
 
             // Update type references to point to compatibility layer
@@ -77,11 +77,11 @@ namespace WPR
                     // Redirect SpriteBatch to compatibility version
                     existingRef.Name = "SpriteBatch2";
                     existingRef.Namespace = "WPR.MonoGameCompability.Graphics";
-                    existingRef.Scope = reference;
+                    existingRef.Scope = referenceMGCompatibility;
                 }
                 else if (existingRef.FullName == "System.Diagnostics.Stopwatch")
                 {
-                    // Ensure proper runtime reference for Stopwatch
+                    // Ensure proper runtime referenceMGCompatibility for Stopwatch
                     existingRef.Scope = referenceRuntime;
                 }
                 else if (existingRef.Name == "GraphicsDeviceManager")
@@ -89,22 +89,43 @@ namespace WPR
                     // Redirect GraphicsDeviceManager to compatibility version
                     existingRef.Name = "GraphicsDeviceManager2";
                     existingRef.Namespace = "WPR.MonoGameCompability";
-                    existingRef.Scope = reference;
+                    existingRef.Scope = referenceMGCompatibility;
                 }
-                /*else if (existingRef.Name == "GamerServicesComponent")
+                else if (existingRef.Name == "GamerServicesComponent")
                 {
                     // Redirect GraphicsDeviceManager to compatibility version
-                    existingRef.Name = "GamerServicesComponent2";
-                    existingRef.Namespace = "WPR.MonoGameCompability";//"Microsoft.Xna.Framework.GamerServices";
-                    existingRef.Scope = reference;// GamerServices;
+                    existingRef.Name = "GamerServicesComponent";
+                    existingRef.Namespace = "WPR.MonoGameCompability.GamerServices";//"Microsoft.Xna.Framework.GamerServices";
+                    existingRef.Scope = referenceMGCompatibility;// referenceGamerServices;
                 }
                 else if (existingRef.Name == "SignedInGamerCollection")
                 {
                     // Redirect GraphicsDeviceManager to compatibility version
-                    existingRef.Name = "SignedInGamerCollection2";
-                    existingRef.Namespace = "Microsoft.Xna.Framework.GamerServices";//"Microsoft.Xna.Framework.GamerServices";
-                    existingRef.Scope = reference;// GamerServices;
-                }*/
+                    existingRef.Name = "SignedInGamerCollection";
+                    existingRef.Namespace = "WPR.MonoGameCompability.GamerServices";//"Microsoft.Xna.Framework.GamerServices";
+                    existingRef.Scope = referenceMGCompatibility;// referenceGamerServices;
+                }
+                else if (existingRef.Name == "Gamer")
+                {
+                    // Redirect GraphicsDeviceManager to compatibility version
+                    existingRef.Name = "SignedInGamerCollection";
+                    existingRef.Namespace = "WPR.MonoGameCompability.GamerServices";//"Microsoft.Xna.Framework.GamerServices";
+                    existingRef.Scope = referenceMGCompatibility;// referenceGamerServices;
+                }
+                else if (existingRef.Name == "SignedInGamer")
+                {
+                    // Redirect GraphicsDeviceManager to compatibility version
+                    existingRef.Name = "SignedInGamerCollection";
+                    existingRef.Namespace = "WPR.MonoGameCompability.GamerServices";//"Microsoft.Xna.Framework.GamerServices";
+                    existingRef.Scope = referenceMGCompatibility;// referenceGamerServices;
+                }
+                else if (existingRef.Name == "SignedInEventArgs")
+                {
+                    // Redirect GraphicsDeviceManager to compatibility version
+                    existingRef.Name = "SignedInGamerCollection";
+                    existingRef.Namespace = "WPR.MonoGameCompability.GamerServices";//"Microsoft.Xna.Framework.GamerServices";
+                    existingRef.Scope = referenceMGCompatibility;// referenceGamerServices;
+                }
             }
 
             // Write modified assembly to memory stream
@@ -142,8 +163,9 @@ namespace WPR
             catch (Exception ex)
             {
                 // Handle any runtime errors
-                Debug.WriteLine("[ex] Process error: " + ex.ToString());
+                Debug.WriteLine("[ex] Process error: " + ex.Message);
                 Debug.WriteLine(ex.StackTrace);
+                return;
             }
 
             Debug.WriteLine("[!] Process ok!");
