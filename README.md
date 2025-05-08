@@ -1,79 +1,25 @@
-# WPR 0.0.9-alpha :: dev branch
-![](Images/logo.png)
-
+# WPR - dev branch
+ 
 WPR is a WP7-8 XNA app runner. This is only my fork of [WPR](https://github.com/8212369/WPR), not the original. 
 
-## Screenshots
-![WPR main screen](Images/sshot01.png)
-![Acedia menu](Images/sshot02.png)
-![Acedia gmeplay](Images/sshot03.png)
-![Mirror's Edge](Images/sshot04.png)
-![AirShip_Challenge](Images/sshot05.png)
-![Asphalt 5](Images/sshot06.png)
+*CAUTION*: this *dev* branch is for internal dev use. 
 
+## Details (steps) of my experiments
+- I found Fruit_Ninja_v1.1.0.0.xap and renamed it (in)to Fruit_Ninja_v1.1.0.0.zip
+- I created c:\Test folder , then I unpack Fruit_Ninja_v1.1.0.0.zip to c:\Test
+- I copied FNWP72.dll as FNWP72.dll.original
+- I opened WPR at/in VS 2022, then I started debugging. I noticed that app patched FNWP72.dll and did some attempt 
+to run "Fruit Ninja" game via XNA Monogame runtime... =)
+- Game start failed, but I noticed that some dll call "redirected" to special "services" ("compatibility layers") such as WPR.WindowsCompability, Microsoft.Xna.Framework.GamerServices, Microsoft.Phone (look at solution structure -- this is special projects-re-translators)
 
 ## Status
-- I started experimenting with .NET 8 & Avalonia 11. 
-- Mirror's Edge, Breakout & Arrkanoid7 fixed (I hope!) 
-- Asphalt 5 improved a little (but I have not accelemometer at now... so, 50 / 50 ! )
-- AirShip_Challenge -- only black screen (cryptographic functions emulation damaged.. idk)
-- BulletAsylum -- 50 / 50 (strange memory viol. access when start level + change song /music play! )
-- All Android-related parts of WPR code are deleted. Android code available only in/at obsolete *master* branch.
-- Thinking of/about switch from Avalonia to Uno / Xamarin Forms / MAUI...
-- Desktop notification improved ("game icon big preview")))
+- Experimenting with original [WPR](https://github.com/8212369/WPR) ' s commit #0 [Fruit Ninja working](https://github.com/8212369/WPR/commit/6219ebcab10a2638d93a1fc0bc15323112b7fd99).
 
-## Tech. details
-- Newest VS 2022 Preview used to "assemble" (build) this "dev branch"
-- I think that WPR "dev edition" incompatible with Win10 because of .NET 8... So, fresh Windows 11 OS needed to run WPR-0.0.7 (however, some reduced Windows 11 Tiny is goode choice even for 15-year-old retro-notebooks... Sony Vaio, etc.)))
-
-## Bugs and mini-FAQs
-- Some games will requre touch screen. In WPR 0.0.7, touch taps emulation (via mouse) is not full (or not present, idk). Example: Skulls of the Shogun.
-- Some games have not full screen (or only part of Windowed zone). Example: Zuma Revenge!
-- Some games can't install because of no WMAppManifest.xml inside xap file. Ho to fix: rename .xap to .zip, and fix WMAppManifest.xml data. For example, I used WMAppManifest.xml (from EarthWormJim.xap) to patch attributes in ZumaRevenge.xap:
-```
-<?xml version="1.0" encoding="utf-16"?>
-<Deployment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" AppPlatformVersion="7.0" xmlns="http://schemas.microsoft.com/windowsphone/2009/deployment">
-  <App Author="Electronic Arts" Description="" Genre="apps.games" ProductID="{128459e9-47a9-df11-a844-00237de2db9e}" Publisher="ElectronicArts" RuntimeType="XNA" Title="Zuna Revenge!" Version="1.0.1.0" xmlns="">
-    <IconPath IsRelative="true" IsResource="false">PhoneGameThumb.png</IconPath>
-    <Capabilities>
-      <Capability Name="ID_CAP_NETWORKING" />
-      <Capability Name="ID_CAP_SENSORS" />
-      <Capability Name="ID_CAP_MEDIALIB" />
-      <Capability Name="ID_CAP_GAMERSERVICES" />
-      <Capability Name="ID_CAP_IDENTITY_DEVICE" />
-    </Capabilities>
-    <Tasks>
-      <DefaultTask Name="_default" />
-    </Tasks>
-    <Tokens>
-      <PrimaryToken TokenID="ZumasRevenge.GameMain" TaskName="_default">
-        <TemplateType5>
-          <BackgroundImageURI IsRelative="true" IsResource="false">Background.png</BackgroundImageURI>
-          <Count>0</Count>
-          <Title>Zuma Revenge!</Title>
-        </TemplateType5>
-      </PrimaryToken>
-    </Tokens>
-  </App>
-</Deployment>
-```
-
-## ToDo
-- Actualize Wiki section
-- Transtale Readme to RU and CN
-- Fix resolution scaling...
-- Port this "app creature" into Xamarin Forms or Uno "multi-platform engine" :)
-
-## Credits
-- Tyler Jaacks (https://github.com/TylerJaacks) - for net5/6 -> net8 upgrade !
-- Hector47 (https://github.com/Hector47) for try to add some online services and more :)
-
-## Another cool forks I noticed over 3 years 
--  https://github.com/TylerJaacks/WPR (branches *net8_upgrade* & *dotnet_upgrade* are very interesting & useful!)
--  https://github.com/Hector47/WPR (master branch: some GameServices ideas)
+- One Big Onsolved (sinse 2022) Dev question about "commit #0" : https://github.com/8212369/WPR/issues/6
 
 ## :: ::
 AS IS. No support. Developers / Geeks only. "DIY mode"
+
 
 ## ::
 [m][e] 2025

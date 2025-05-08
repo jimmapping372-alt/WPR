@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Platforms>AnyCPU;x64</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Mono.Cecil" Version="0.11.4" />
+    <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8.1.303" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.Phone\Microsoft.Phone.csproj" />
+    <ProjectReference Include="..\Microsoft.Xna.Framework.GamerServices\Microsoft.Xna.Framework.GamerServices.csproj" />
+    <ProjectReference Include="..\WPR.Common\WPR.Common.csproj" />
+    <ProjectReference Include="..\WPR.MonoGameCompabilityPatch\WPR.MonoGameCompability.csproj" />
+    <ProjectReference Include="..\WPR.WindowsCompability\WPR.WindowsCompability.csproj" />
+  </ItemGroup>
+
+</Project>
