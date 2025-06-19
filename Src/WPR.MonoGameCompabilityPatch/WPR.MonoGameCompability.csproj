@@ -1,20 +1,19 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
-    <EFVersion>6.0.8</EFVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ExCSS" Version="4.1.4" />
-    <PackageReference Include="HtmlAgilityPack" Version="1.11.45" />
-    <PackageReference Include="HtmlAgilityPack.CssSelectors" Version="1.0.2" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="$(EFVersion)" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(EFVersion)" />
-    <PackageReference Include="Microsoft.Windows.Compatibility" Version="6.0.0" />
-    <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8.1.303" />
+    <PackageReference Include="ExCSS" />
+    <PackageReference Include="HtmlAgilityPack" />
+    <PackageReference Include="HtmlAgilityPack.CssSelectors" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Microsoft.Windows.Compatibility" />
+    <PackageReference Include="MonoGame.Framework.WindowsDX" />
   </ItemGroup>
 
   <ItemGroup>
