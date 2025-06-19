@@ -1,5 +1,6 @@
-# WPR - dev branch
- 
+# WPR 0.0.12-alpha :: dev branch
+![](Images/logo.png)
+
 WPR is a WP7-8 XNA app runner. This is only my fork of [WPR](https://github.com/8212369/WPR), not the original. 
 
 *CAUTION*: this *dev* branch is for internal dev use. 
@@ -24,3 +25,4 @@ AS IS. No support. Developers / Geeks only. "DIY mode"
 ## ::
 [m][e] 2025
 
+![](Images/footer.png)

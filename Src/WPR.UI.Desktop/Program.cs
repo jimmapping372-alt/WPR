@@ -1,4 +1,25 @@
-﻿using System.Reflection;
+﻿/*using System;
+using Avalonia;
+
+namespace WPR.UI.Desktop;
+
+sealed class Program
+{
+    // Initialization code. Don't use any Avalonia, third-party APIs or any
+    // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
+    // yet and stuff might break.
+    [STAThread]
+    public static void Main(string[] args) => BuildAvaloniaApp()
+        .StartWithClassicDesktopLifetime(args);
+
+    // Avalonia configuration, don't remove; also used by visual designer.
+    public static AppBuilder BuildAvaloniaApp()
+        => AppBuilder.Configure<App>()
+            .UsePlatformDetect()
+            .WithInterFont()
+            .LogToTrace();
+}*/
+using System.Reflection;
 using WPR;
 using Microsoft.Xna.Framework;
 using Mono.Cecil;
@@ -23,7 +44,7 @@ namespace WPR
                 new AssemblyName("MonoGame.Framework"));
 
             // Prepare references for compatibility patches
-            
+
             AssemblyNameReference referenceMGCompatibility = AssemblyNameReference.Parse("WPR.MonoGameCompability");
             AssemblyNameReference referenceRuntime = AssemblyNameReference.Parse("System.Runtime");
             //AssemblyNameReference referenceGamerServices = AssemblyNameReference.Parse("Microsoft.Xna.Framework.GamerServices");
@@ -37,24 +58,25 @@ namespace WPR
             }
 
             // Get type definition for patching from compatibility assembly
-            TypeDefinition typedef = patchMono.MainModule.GetType("WPF.MonoGameCompabilityPatch", 
+            TypeDefinition typedef = patchMono.MainModule.GetType("WPF.MonoGameCompabilityPatch",
                 "SpriteBatchPatch");
-            
+
             // Scan type references in target assembly for XNA Graphics types
-            foreach (TypeReference? refer in newAsm.MainModule.GetTypeReferences()) 
+            foreach (TypeReference? refer in newAsm.MainModule.GetTypeReferences())
             {
                 if (refer.Module.Name == "Microsoft.Xna.Framework.Graphics")
                 {
                     MetadataToken t = refer.MetadataToken; // Capture metadata token for potential processing
                 }
-            };
+            }
+            ;
 
 
             // Modify assembly references to redirect XNA to MonoGame 
             ModuleDefinition module = newAsm.Modules[0];
-            foreach (AssemblyNameReference? refer in module.AssemblyReferences) 
+            foreach (AssemblyNameReference? refer in module.AssemblyReferences)
             {
-                if ( refer.Name.Contains("Microsoft.Xna") && (!refer.Name.Contains("GamerServices")))
+                if (refer.Name.Contains("Microsoft.Xna") && (!refer.Name.Contains("GamerServices")))
                 {
                     // Replace XNA assembly referenceMGCompatibility with MonoGame equivalent
                     refer.Name = assemMono.GetName().Name;
@@ -147,7 +169,7 @@ namespace WPR
 
             // Load and instantiate modified game assembly
             //Assembly assem = AssemblyLoadContext.Default.LoadFromStream(stream);
-            Assembly assem = AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath: "C:\\Temp\\FNWP72.dll");    
+            Assembly assem = AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath: "C:\\Temp\\FNWP72.dll");
 
             Type tt = assem.GetType("Mortar.TheGame");
             //Type tt = assem.GetType("DoodleJump");
