@@ -10,7 +10,7 @@ WPR is a WP7-8 XNA app runner. This is only some *clone* of [WPR](https://github
 ![](Images/sshot02.png)
 
 ## Status
-- I started experimenting with .NET 8 & Avalonia 11.1-beta. I did some steps to support real multiplatform (see list of projects in UI folder).   
+- I started experimenting with .NET 8 & Avalonia 11.1-beta. I did some steps to support real multiplatform solution (see list of projects in UI folder).   
 - With help of Trial mode of WindSurf (and ChatGPT 4 AI) I repaired Android-related parts of WPR code... (but still work-in-progress!).
 - Some experimental "UI improvements applied ("Two small Run and Uninstall" icons added to main/larg icon in app/game list). Run & App also added to popup/context menu.
 - All AI-generated things not tested yet (no Android device, and Android emulator errors because of my veeeey poor hardware; also, I never haved any iOS device ... so, help needed)
