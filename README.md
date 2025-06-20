@@ -14,6 +14,7 @@ WPR is a WP7-8 XNA app runner. This is only some *clone* of [WPR](https://github
 - With help of Trial mode of WindSurf (and ChatGPT 4 AI) I repaired Android-related parts of WPR code... (but still work-in-progress!).
 - Some experimental "UI improvements applied ("Two small Run and Uninstall" icons added to main/larg icon in app/game list). Run & App also added to popup/context menu.
 - All AI-generated things not tested yet (no Android device, and Android emulator errors because of my veeeey poor hardware; also, I never haved any iOS device ... so, help needed)
+- For Android target, I changed Min. Supported Android Api version from 21 to 26 in project (.csproj) files. 
 
 ## Tech. details
 - Newest VS 2022 Preview used to "assemble" (build) this "dev branch"
