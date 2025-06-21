@@ -4,7 +4,7 @@
     <TargetFramework>net8.0-android34.0</TargetFramework>
     <SupportedOSPlatformVersion>21</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
-    <AvaloniaVersion>11.1-beta1</AvaloniaVersion>
+    <AvaloniaVersion>11.1</AvaloniaVersion>
     <ApplicationId>com.MediaExplorer.WPR</ApplicationId>
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>0.0.12</ApplicationDisplayVersion>

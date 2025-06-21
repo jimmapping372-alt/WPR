@@ -45,8 +45,8 @@ namespace WPR.UI.Desktop
             => AppBuilder.Configure<App>()
                 .UsePlatformDetect()
                 .LogToTrace()
-                .UseReactiveUI()
-                .WithIcons(container => container
-                    .Register<FontAwesomeIconProvider>());
+                .UseReactiveUI();
+                //.WithIcons(container => container
+                //    .Register<FontAwesomeIconProvider>());
     }
 }

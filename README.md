@@ -5,22 +5,30 @@ WPR is a WP7-8 XNA app runner. This is only some *clone* of [WPR](https://github
 
 *CAUTION*: this *dev* branch is for internal dev use. Experienced devs only.
 
-## Screenshots
-![](Images/sshot01.png)
-![](Images/sshot02.png)
 
 ## Status
-- I started experimenting with .NET 8 & Avalonia 11.1-beta. I did some steps to support real multiplatform solution (see list of projects in UI folder).   
+- I started experimenting with .NET 8 & Avalonia 11.1.0... So, I did some steps to support real multiplatform solution (see list of projects in UI folder).   
 - With help of Trial mode of WindSurf (and ChatGPT 4 AI) I repaired Android-related parts of WPR code... (but still work-in-progress!).
 - Some experimental "UI improvements applied ("Two small Run and Uninstall" icons added to main/larg icon in app/game list). Run & App also added to popup/context menu.
 - All AI-generated things not tested yet (no Android device, and Android emulator errors because of my veeeey poor hardware; also, I never haved any iOS device ... so, help needed)
-- For Android target, I set Min. Supported Android Api version to 21. 
+- For Android target, I set Min. Supported Android Api version to 21, and Main Android Api version - 34. 
+
 
 ## Tech. details
 - Newest VS 2022 Preview used to "assemble" (build) this "dev branch"
 - I think that WPR "dev edition" incompatible with Win10 because of .NET 8... So, fresh Windows11-based OS needed to run WPR (Official Win 11 Pro recommended.. however, some reduced Windows 11 Tiny is good choice too, for example my 15-year-old retro-notebook Sony Vaio)))
 
-## Bugs and mini-FAQs
+## Bugs 
+
+- After Avalonia 11.0.999-beta upgrade I damaged Windows target: 
+```
+System.TypeInitializationException: 'The type initializer for 'DialogHost.DialogHost' threw an exception.'
+
+MissingMethodException: Method not found: 'Avalonia.StyledProperty`1<!!1> Avalonia.AvaloniaProperty.Register(System.String, !!1, Boolean, Avalonia.Data.BindingMode, System.Func`2<!!1,Boolean>, System.Func`3<Avalonia.IAvaloniaObject,!!1,!!1>, System.Action`2<Avalonia.IAvaloniaObject,Boolean>)'.
+```
+- Android target damaged too... idk how to fix it.
+
+## Mini-FAQs
 - Some games will requre touch screen. In WPR, touch taps emulation (via mouse) is not full (or not present, idk). Example: Skulls of the Shogun.
 - Some games have not full screen (or only part of Windowed zone). Example: Zuma Revenge!
 - Some games can't install because of no WMAppManifest.xml inside xap file. Ho to fix: rename .xap to .zip, and fix WMAppManifest.xml data. For example, I used WMAppManifest.xml (from EarthWormJim.xap) to patch attributes in ZumaRevenge.xap:
