@@ -124,7 +124,7 @@ namespace WPR.UI.ViewModels
                 {
                     CancelSource = new CancellationTokenSource();
 
-                    return await ApplicationInstaller.Install(fileStream,
+                    return await ApplicationInstaller.InstallFromWpr(fileStream,
                         progressValue => InstallationSetProgress!.Invoke(progressValue),
                         app => DeleteExistingAppInteraction!.Handle(app),
                         CancelSource.Token);

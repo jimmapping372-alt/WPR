@@ -1,0 +1,19 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="XapToWPR.MainWindow"
+        Width="600" Height="220"
+        Title="XapToWPR Converter">
+  <Grid RowDefinitions="Auto,Auto,Auto,*" ColumnDefinitions="Auto,*,Auto">
+    <TextBlock Grid.Row="0" Grid.Column="0" Margin="8" VerticalAlignment="Center" Text="Input XAP:"/>
+    <TextBox Grid.Row="0" Grid.Column="1" Margin="8" Name="InputPathTextBox" IsReadOnly="True"/>
+    <Button Grid.Row="0" Grid.Column="2" Margin="8" Name="BrowseInputButton" Content="Browse..."/>
+
+    <TextBlock Grid.Row="1" Grid.Column="0" Margin="8" VerticalAlignment="Center" Text="Output WPR:"/>
+    <TextBox Grid.Row="1" Grid.Column="1" Margin="8" Name="OutputPathTextBox" IsReadOnly="True"/>
+    <Button Grid.Row="1" Grid.Column="2" Margin="8" Name="BrowseOutputButton" Content="Browse..."/>
+
+    <Button Grid.Row="2" Grid.Column="2" Margin="8" Name="ConvertButton" Content="Convert" HorizontalAlignment="Right"/>
+
+    <TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Margin="8" Name="StatusTextBlock" TextWrapping="Wrap"/>
+  </Grid>
+</Window>

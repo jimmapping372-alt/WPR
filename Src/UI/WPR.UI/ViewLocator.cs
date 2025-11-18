@@ -7,7 +7,7 @@ namespace WPR.UI
 {
     public class ViewLocator : IDataTemplate
     {
-        public Control Build(object data) //IControl
+        public IControl Build(object data) // public Control
         {
             var name = data.GetType().FullName!.Replace("ViewModel", "View");
             var type = Type.GetType(name);

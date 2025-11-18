@@ -25,9 +25,9 @@ namespace WPR.UI.Pages
 
             AppInstallFileFilters = new List<FilePickerFileType>
             {
-                new FilePickerFileType("XAP file")
+                new FilePickerFileType("WPR package")
                 {
-                    Patterns = new List<string> { "*.xap" }
+                    Patterns = new List<string> { "*.wpr" }
                 },
                 new FilePickerFileType("All files")
                 {

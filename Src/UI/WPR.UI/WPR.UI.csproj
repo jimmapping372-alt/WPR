@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-	<AvaloniaVersion>11.1</AvaloniaVersion>
+	<AvaloniaVersion>11.0.999-cibuild0023504-beta</AvaloniaVersion>
 	<OutputType>Library</OutputType>
     <TrimMode>copyused</TrimMode>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>

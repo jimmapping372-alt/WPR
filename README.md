@@ -1,17 +1,17 @@
-# WPR 0.0.12-alpha :: dev branch
+# WPR 0.0.14-pre-alpha :: dev branch
 ![](Images/logo.png)
 
 WPR is a WP7-8 XNA app runner. This is only some *clone* of [WPR](https://github.com/8212369/WPR), not the original. 
 
-*CAUTION*: this *dev* branch is for internal dev use. Experienced devs only.
+*CAUTION*: this *dev* branch is for internal dev use. Experienced devs only!
 
 
 ## Status
-- I started experimenting with .NET 8 & Avalonia 11.1.0... So, I did some steps to support real multiplatform solution (see list of projects in UI folder).   
-- With help of Trial mode of WindSurf (and ChatGPT 4 AI) I repaired Android-related parts of WPR code... (but still work-in-progress!).
-- Some experimental "UI improvements applied ("Two small Run and Uninstall" icons added to main/larg icon in app/game list). Run & App also added to popup/context menu.
-- All AI-generated things not tested yet (no Android device, and Android emulator errors because of my veeeey poor hardware; also, I never haved any iOS device ... so, help needed)
-- For Android target, I set Min. Supported Android Api version to 21, and Main Android Api version - 34. 
+- I tried to "devide" WPR system on/by 2 parts: XapToWPR converter & WPR "installer/launcher". Work-in-progress (5% done).
+- XapToWPR uses Avalonia "engine"
+- WPR.UWP, WPR.Android, WPR.iOS - Xamarin Forms (see new Src/WPR folder).
+- XapToWPR damaged (great tech. problems on app run!)
+- WPR.UWP (and "common" WPR) damaged too, sadly
 
 
 ## Tech. details
@@ -28,43 +28,14 @@ MissingMethodException: Method not found: 'Avalonia.StyledProperty`1<!!1> Avalon
 ```
 - Android target damaged too... idk how to fix it.
 
-## Mini-FAQs
-- Some games will requre touch screen. In WPR, touch taps emulation (via mouse) is not full (or not present, idk). Example: Skulls of the Shogun.
-- Some games have not full screen (or only part of Windowed zone). Example: Zuma Revenge!
-- Some games can't install because of no WMAppManifest.xml inside xap file. Ho to fix: rename .xap to .zip, and fix WMAppManifest.xml data. For example, I used WMAppManifest.xml (from EarthWormJim.xap) to patch attributes in ZumaRevenge.xap:
-```
-<?xml version="1.0" encoding="utf-16"?>
-<Deployment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" AppPlatformVersion="7.0" xmlns="http://schemas.microsoft.com/windowsphone/2009/deployment">
-  <App Author="Electronic Arts" Description="" Genre="apps.games" ProductID="{128459e9-47a9-df11-a844-00237de2db9e}" Publisher="ElectronicArts" RuntimeType="XNA" Title="Zuna Revenge!" Version="1.0.1.0" xmlns="">
-    <IconPath IsRelative="true" IsResource="false">PhoneGameThumb.png</IconPath>
-    <Capabilities>
-      <Capability Name="ID_CAP_NETWORKING" />
-      <Capability Name="ID_CAP_SENSORS" />
-      <Capability Name="ID_CAP_MEDIALIB" />
-      <Capability Name="ID_CAP_GAMERSERVICES" />
-      <Capability Name="ID_CAP_IDENTITY_DEVICE" />
-    </Capabilities>
-    <Tasks>
-      <DefaultTask Name="_default" />
-    </Tasks>
-    <Tokens>
-      <PrimaryToken TokenID="ZumasRevenge.GameMain" TaskName="_default">
-        <TemplateType5>
-          <BackgroundImageURI IsRelative="true" IsResource="false">Background.png</BackgroundImageURI>
-          <Count>0</Count>
-          <Title>Zuma Revenge!</Title>
-        </TemplateType5>
-      </PrimaryToken>
-    </Tokens>
-  </App>
-</Deployment>
-```
 
 ## ToDo
+- Try to fix XapToWPR 
+- Try to fix WPR.UWP, etc.
 - Actualize Wiki section
-- Transtale Readme to RU and CN
-- Fix resolution scaling...
-- Port this "app creature" into Xamarin Forms or Uno "multi-platform engine" :)
+- Transtale/dublicate Readme to RU and CN
+- Fix resolution scaling (for example, Zuma's scaling bug)
+
 
 ## Credits
 - Tyler Jaacks (https://github.com/TylerJaacks) - for net5/6 -> net8 upgrade !
@@ -78,7 +49,7 @@ MissingMethodException: Method not found: 'Avalonia.StyledProperty`1<!!1> Avalon
 AS IS. No support. Developers / Geeks only. "DIY mode"
 
 ## ::
-[m][e] June, 20 2025
+[m][e] Nov, 18 2025
 
 ![](Images/footer.png) 
 

@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="WPR.MainPage"
+             Title="WPR Emulator">
+
+    <StackLayout Padding="12" Spacing="8">
+        <Label Text="Installed games" FontSize="Title" />
+
+        <ListView x:Name="GamesList"
+                  HasUnevenRows="true"
+                  SelectionMode="Single">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <TextCell Text="{Binding Name}" Detail="{Binding Version}" />
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <StackLayout Orientation="Horizontal" Spacing="8">
+            <Button Text="Install WPR" x:Name="InstallButton" />
+            <Button Text="Run selected" x:Name="RunButton" />
+        </StackLayout>
+
+        <StackLayout Orientation="Horizontal" Spacing="8" VerticalOptions="EndAndExpand">
+            <ProgressBar x:Name="InstallProgress" VerticalOptions="Center" HorizontalOptions="FillAndExpand" />
+            <Label x:Name="StatusLabel" FontSize="Micro" VerticalOptions="Center" />
+        </StackLayout>
+    </StackLayout>
+
+</ContentPage>

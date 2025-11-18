@@ -13,10 +13,10 @@
         <RowDefinition Height="Auto" />
         <RowDefinition/>
       </Grid.RowDefinitions>
-      <TextBox Grid.Row="0" Name="searchBarTextBox" Text="{Binding SearchText, Mode=TwoWay}"
+      <TextBox Grid.Row="0" Name="searchBarTextBox" Text="{Binding SearchText}"
                Margin="10,10,10,0"
                Watermark="{x:Static p:Resources.SearchForAppSearchBar}" Background="Transparent"/>
-      <ListBox Grid.Row="1" Name="appListBox" Margin="10 10" VerticalAlignment="Stretch" ItemsSource="{Binding Applications}"
+      <ListBox Grid.Row="1" Name="appListBox" Margin="10 10" VerticalAlignment="Stretch" Items="{Binding Applications}"
                SelectedItem="{Binding ChoosenApp}" Background="Transparent" ScrollViewer.VerticalScrollBarVisibility="Visible">
         <ListBox.ContextMenu>
           <ContextMenu>
@@ -53,6 +53,10 @@
 				CornerRadius="64"
 				Background="BlueViolet"
 				ToolTip.Tip="{x:Static p:Resources.InstallNewAppToolTip}"
-				/>   
+				/>
+    <!--ContextMenu>
+		<MenuItem Header="Run" Command="{Binding RunAppCommand}" CommandParameter="{Binding #appListBox.RightTappedItem}"/>
+		<MenuItem Header="Delete item" Command="{Binding DeleteAppCommand}" CommandParameter="{Binding #appListBox.RightTappedItem}"/>
+	</ContextMenu-->
   </Panel>
 </UserControl>

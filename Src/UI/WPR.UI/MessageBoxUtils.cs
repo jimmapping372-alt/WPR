@@ -8,11 +8,11 @@ using Android.Widget;
 //using WPR.WindowsCompability;
 
 #else
-//using Avalonia.Controls;
-//using Avalonia.Threading;
+using Avalonia.Controls;
+using Avalonia.Threading;
 #endif
 
-//using MessageBox.Avalonia;
+using MessageBox.Avalonia;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace WPR.UI
@@ -22,13 +22,12 @@ namespace WPR.UI
 #if __ANDROID__
         public static Activity MainActivity { get; set; }
 #else
-        //public static Window MainWindow { get; set; }
+        public static Window MainWindow { get; set; }
 #endif
 
-        /*
         public static Task<MessageBox.Avalonia.Enums.ButtonResult> GetMessageDialogResult(string title,
             string text, MessageBox.Avalonia.Enums.ButtonEnum buttons = MessageBox.Avalonia.Enums.ButtonEnum.Ok,
-            MessageBox.Avalonia.Enums.Icon icon = MessageBox.Avalonia.Enums.Icon.Info, IEnumerable<string> ?buttonTexts = null,
+            MessageBox.Avalonia.Enums.Icon icon = MessageBox.Avalonia.Enums.Icon.Info, IEnumerable<string>? buttonTexts = null,
             bool modalOnWindow = true, bool dispatchMain = false)
         {
 #if __ANDROID__
@@ -177,7 +176,6 @@ namespace WPR.UI
             });
 
             return source.Task;
-        }
 #else
             Func<Task<string>> returnTaskFunc = async () =>
             {
@@ -201,8 +199,7 @@ namespace WPR.UI
             }
 
             return returnTaskFunc();
-        }
 #endif
-        */
+        }
     }
 }
