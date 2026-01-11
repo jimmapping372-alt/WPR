@@ -7,8 +7,8 @@
     </Application.DataTemplates>
 
     <Application.Styles>
-      <!--FluentTheme ThemeVariant="Dark"/-->
-      <!--StyleInclude Source="avares://DialogHost.Avalonia/Styles.xaml"/-->
+        <FluentTheme/>
+		<StyleInclude Source="avares://DialogHost.Avalonia/Styles.xaml"/>
 
 		<Style Selector="Label">
 			<Setter Property="Foreground" Value="White" />

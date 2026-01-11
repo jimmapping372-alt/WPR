@@ -1,41 +1,50 @@
-# WPR 0.0.14-pre-alpha :: dev branch
+# WPR 0.0.16-alpha :: dev branch
 ![](Images/logo.png)
 
-WPR is a WP7-8 XNA app runner. This is only some *clone* of [WPR](https://github.com/8212369/WPR), not the original. 
+WPR is a WP7-8 XNA app runner. This is only my fork of [WPR](https://github.com/8212369/WPR), not the original. 
 
-*CAUTION*: this *dev* branch is for internal dev use. Experienced devs only!
+NOTE: previous *dev* branch copied to "experimental" one. In my new "dev" branch I cancelled my "iOS / XBox" dream (not enough skills, heh!). 
 
+CAUTION: _dev_ branch may not build / run normally. This is work-in-progress!
+
+
+## What's new in dev?
+- I have successfully completed the task of merging versions of WPR 0.0.12 and WPR 0.0.15 with the addition of the required functions:
+- I analyzed both versions of WPR (0.0.12 and 0.0.15) and found differences
+- Identified key features from WPR 0.0.12 that needed to be combined with WPR 0.0.15
+- Developed a merger strategy based on compatibility with .NET 8 and Avalonia 11.3.9
+- Combined functions from version 0.0.12 to 0.0.15
+- Added explicit logging of Avalonia initialization for launching and displaying in the main window
+- Added a small health check window to confirm the creation of a UI thread and window
+- Fixed all critical errors that interfere with the build.:
+- Fixed bugs related to AudioCompabilityConverter
+- Fixed errors related to MessageBox and namespaces
+- Fixed bugs related to ViewLocator and Avalonia
+- Performed a test build using MSBuild, which was successful without errors (warnings only)
+- Now WPR 0.0.15 contains all the features from version 0.0.12, but with a modern engine.NET 8 and Avalonia 11.3.9. The application is successfully built and ready for use.
 
 ## Status
-- I tried to "devide" WPR system on/by 2 parts: XapToWPR converter & WPR "installer/launcher". Work-in-progress (5% done).
-- XapToWPR uses Avalonia "engine"
-- WPR.UWP, WPR.Android, WPR.iOS - Xamarin Forms (see new Src/WPR folder).
-- XapToWPR damaged (great tech. problems on app run!)
-- WPR.UWP (and "common" WPR) damaged too, sadly
+- Build ok! I started experimenting with .NET 8 & Avalonia _11.3.9_. I started to repair Android part of solution & Desktop (Windows) part of solution too. So, *avalonia* branch consists of 2 targets: Windows & Android at now :)
+- With help of Trial mode of WindSurf (and ChatGPT 4 AI) I partially repaired Android-related parts of WPR code... But this is still work-in-progress: 100500 new errors (because of Avalonia 11 incompatibility with Avalonia 9 / 10), and many game "patches" lost!
+- Experimental "UI improvements applied ("Two small Run and Uninstall" icons added to main/larg icon in app/game list) lost. No "Run & App at popup/context menu".
+- All AI-generated things not tested yet 
+- For Android target, I changed Min. Supported Android Api version from 21 to 26 in project (.csproj) files. 
 
 
 ## Tech. details
-- Newest VS 2022 Preview used to "assemble" (build) this "dev branch"
-- I think that WPR "dev edition" incompatible with Win10 because of .NET 8... So, fresh Windows11-based OS needed to run WPR (Official Win 11 Pro recommended.. however, some reduced Windows 11 Tiny is good choice too, for example my 15-year-old retro-notebook Sony Vaio)))
-
-## Bugs 
-
-- After Avalonia 11.0.999-beta upgrade I damaged Windows target: 
-```
-System.TypeInitializationException: 'The type initializer for 'DialogHost.DialogHost' threw an exception.'
-
-MissingMethodException: Method not found: 'Avalonia.StyledProperty`1<!!1> Avalonia.AvaloniaProperty.Register(System.String, !!1, Boolean, Avalonia.Data.BindingMode, System.Func`2<!!1,Boolean>, System.Func`3<Avalonia.IAvaloniaObject,!!1,!!1>, System.Action`2<Avalonia.IAvaloniaObject,Boolean>)'.
-```
-- Android target damaged too... idk how to fix it.
+- Newest VS 2022 or above must be used to "assemble" (build) this _avalonia_ branch
+- I think that WPR 0.0.15 "avalonia edition" incompatible with Windows 10 because of .NET 8... So, fresh Windows 11 OS needed to run WPR (however, some reduced Windows 11 Tiny is good choice even for some very retro-notebooks).
 
 
 ## ToDo
-- Try to fix XapToWPR 
-- Try to fix WPR.UWP, etc.
+- Solve "White screen instead of App UI" bug for Android target 
+- Repair lost game patches (use "avalonia-win" branch) 
+- Test Desktop (Windows) target
+- Test Android target
 - Actualize Wiki section
-- Transtale/dublicate Readme to RU and CN
-- Fix resolution scaling (for example, Zuma's scaling bug)
-
+- Transtale Readme to RU and CN
+- Fix Zuma "game screen" scaling...
+- Try to port this "app creature" (in)to modern "multi-platform engine" such as MAUI (far future)
 
 ## Credits
 - Tyler Jaacks (https://github.com/TylerJaacks) - for net5/6 -> net8 upgrade !
@@ -49,9 +58,6 @@ MissingMethodException: Method not found: 'Avalonia.StyledProperty`1<!!1> Avalon
 AS IS. No support. Developers / Geeks only. "DIY mode"
 
 ## ::
-[m][e] Nov, 18 2025
+[m][e] 2026
 
-![](Images/footer.png) 
-
-[ https://www.youtube.com/watch?v=X-G8oXebid0 ]
-
+![](Images/footer.png)

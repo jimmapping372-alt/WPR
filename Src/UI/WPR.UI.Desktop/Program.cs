@@ -46,7 +46,5 @@ namespace WPR.UI.Desktop
                 .UsePlatformDetect()
                 .LogToTrace()
                 .UseReactiveUI();
-                //.WithIcons(container => container
-                //    .Register<FontAwesomeIconProvider>());
     }
 }
