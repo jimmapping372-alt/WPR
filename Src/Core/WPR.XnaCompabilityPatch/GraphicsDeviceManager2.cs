@@ -14,7 +14,8 @@ namespace WPR.XnaCompability
         }
 
 #if !__MOBILE__
-        public new bool IsFullScreen {
+        public new bool IsFullScreen
+        {
             get => false;
             set => base.IsFullScreen = false;
         }
@@ -28,8 +29,17 @@ namespace WPR.XnaCompability
 
         public static void RequestOrientationChange(int width, int height)
         {
-            RequestOrientation?.Invoke((width > height) ? DisplayOrientation.LandscapeRight 
-                : DisplayOrientation.Portrait);
+            DisplayOrientation device_orientation = default;
+
+            if (width > height)
+            {
+                device_orientation = DisplayOrientation.LandscapeRight;
+            }
+            else
+            {
+                device_orientation = DisplayOrientation.Portrait;
+            }
+            RequestOrientation?.Invoke(device_orientation);
         }
     }
 }

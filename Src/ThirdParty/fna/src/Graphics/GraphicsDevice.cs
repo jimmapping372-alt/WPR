@@ -1,4 +1,4 @@
-#region License
+﻿#region License
 /* FNA - XNA4 Reimplementation for Desktop Platforms
  * Copyright 2009-2022 Ethan Lee and the MonoGame Team
  *
@@ -1510,14 +1510,22 @@ namespace Microsoft.Xna.Framework.Graphics
 
 				modifiedSamplers[sampler] = false;
 
-				FNA3D.FNA3D_VerifySampler(
-					GLDevice,
-					sampler,
-					(Textures[sampler] != null) ?
-						Textures[sampler].texture :
-						IntPtr.Zero,
-					ref SamplerStates[sampler].state
-				);
+				//TODO: fix memory access violation
+				try
+				{
+					FNA3D.FNA3D_VerifySampler(
+						GLDevice,
+						sampler,
+						(Textures[sampler] != null) ?
+							Textures[sampler].texture :
+							IntPtr.Zero,
+						ref SamplerStates[sampler].state
+					);
+				}
+				catch (Exception ex)
+				{
+					Debug.WriteLine("[ex] FNA - GraphicsDevice - ApplySamplers exception:" + ex.Message);
+				}
 			}
 
 			for (int sampler = 0; sampler < modifiedVertexSamplers.Length; sampler += 1) 

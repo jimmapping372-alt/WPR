@@ -10,11 +10,17 @@ CAUTION: _dev_ branch may not build / run normally. This is work-in-progress!
 ## Screenshots
 ![](Images/sshot01.png)
 ![](Images/sshot02.png)
+![](Images/sshot03.png)
+![](Images/sshot04.png)
+![](Images/sshot05.png)
+![](Images/sshot06.png)
+![](Images/sshot07.png)
+![](Images/sshot08.png)
 
 
 ## What's new in dev?
 - Developed a merger strategy based on compatibility with .NET 8 and Avalonia 11.3.9
-- Merged functions from version 0.0.12 to 0.0.16
+- Merged (almost?) all functions from version 0.0.12 to 0.0.16
 - Added explicit logging of Avalonia initialization for launching and displaying in the main window
 - Added a small health check window to confirm the creation of a UI thread and window
 - Fixed all critical errors that interfere with the build.:
@@ -48,6 +54,14 @@ CAUTION: _dev_ branch may not build / run normally. This is work-in-progress!
 - Transtale Readme to RU and CN
 - Fix Zuma "game screen" scaling...
 - Try to port this "app creature" (in)to modern "multi-platform engine" such as MAUI (far future)
+
+## Test Plan Steps
+-  **run build**
+-  **inspect build errors**
+-  **open files reported in errors**
+-  **apply minimal code fixes to each file**
+-  **run build to verify fixes**
+-  **repeat until build succeeds or errors blocked**
 
 ## Credits
 - Tyler Jaacks (https://github.com/TylerJaacks) - for net5/6 -> net8 upgrade !

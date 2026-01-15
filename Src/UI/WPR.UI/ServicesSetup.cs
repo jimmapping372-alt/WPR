@@ -31,8 +31,10 @@ namespace WPR.UI
                         break;
                 }
 
-                var result = await MessageBoxUtils.GetMessageDialogResult(title, description, (buttonNames.Count() <= 1) ? MessageBox.Avalonia.Enums.ButtonEnum.Ok
-                    : MessageBox.Avalonia.Enums.ButtonEnum.YesNo, messageBoxIcon, buttonNames, false, true);
+                var result = await MessageBoxUtils.GetMessageDialogResult(title, description, (buttonNames.Count() <= 1) 
+                        ? MessageBox.Avalonia.Enums.ButtonEnum.Ok
+                        : MessageBox.Avalonia.Enums.ButtonEnum.YesNo, 
+                    messageBoxIcon, buttonNames, false, true);
 
                 if (result == MessageBox.Avalonia.Enums.ButtonResult.None)
                 {
@@ -48,7 +50,8 @@ namespace WPR.UI
                 MessageBox.Avalonia.Enums.ButtonEnum buttonImpl = MessageBox.Avalonia.Enums.ButtonEnum.Ok;
                 switch (button)
                 {
-                    case System.Windows.MessageBoxButton.OK:
+                    //TODO: implement other buttons
+                    /*case System.Windows.MessageBoxButton.OK:
                         buttonImpl = MessageBox.Avalonia.Enums.ButtonEnum.Ok;
                         break;
 
@@ -62,7 +65,7 @@ namespace WPR.UI
 
                     case System.Windows.MessageBoxButton.YesNo:
                         buttonImpl = MessageBox.Avalonia.Enums.ButtonEnum.YesNo;
-                        break;
+                        break;*/
 
                     default:
                         break;
@@ -73,7 +76,7 @@ namespace WPR.UI
 
                 switch (result)
                 {
-                    case MessageBox.Avalonia.Enums.ButtonResult.Ok:
+                    /*case MessageBox.Avalonia.Enums.ButtonResult.Ok:
                         return System.Windows.MessageBoxResult.OK;
 
                     case MessageBox.Avalonia.Enums.ButtonResult.Yes:
@@ -84,9 +87,9 @@ namespace WPR.UI
 
                     case MessageBox.Avalonia.Enums.ButtonResult.Cancel:
                         return System.Windows.MessageBoxResult.Cancel;
-
+                    */
                     default:
-                        return System.Windows.MessageBoxResult.None;
+                        return default;//System.Windows.MessageBoxResult.None;
                 }
             };
         }

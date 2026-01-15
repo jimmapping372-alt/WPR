@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Threading;
 using System;
+using System.Diagnostics;
 
 namespace Microsoft.Xna.Framework.GamerServices
 {
@@ -17,6 +18,10 @@ namespace Microsoft.Xna.Framework.GamerServices
         private static bool FirstSignInSessionDone = false;
 
         private PlayerIndex _PlayerIndex;
+
+        private GamerPrivileges _GamerPrivileges = new GamerPrivileges();
+
+        private GamerPresence _GamerPresence = new GamerPresence();
 
         public event EventHandler<EventArgs> AvatarChanged;
         
@@ -39,7 +44,16 @@ namespace Microsoft.Xna.Framework.GamerServices
                         Task.Delay(DelaySignedInMillis).ContinueWith(previous =>
                         {
                             FirstSignInSessionDone = true;
-                            value.Invoke(null, new SignedInEventArgs(_SignedInGamers[0]));
+
+                            //TODO: handle multiple signed in gamers
+                            try
+                            {
+                                value.Invoke(null, new SignedInEventArgs(_SignedInGamers[0]));
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.WriteLine("[ex] SignedInGamer exception: " + ex.Message);
+                            }
                         });
                     }
                 }
@@ -224,19 +238,15 @@ namespace Microsoft.Xna.Framework.GamerServices
 
         public GamerPresence Presence
         {
-            get
-            {
-                throw new NotImplementedException();
-            }
+            get => _GamerPresence;
+            set => _GamerPresence = value;
         }
 
         public GamerPrivileges Privileges
-        {
-            get
-            {
-                throw new NotImplementedException();
-            }
+        {            
+            get => _GamerPrivileges;
+            set => _GamerPrivileges = value;
         }
-
     }
+   
 }

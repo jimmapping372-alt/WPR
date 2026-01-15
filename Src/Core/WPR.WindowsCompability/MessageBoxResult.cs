@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace System.Windows
+namespace WPR.WindowsCompability
 {
     public enum MessageBoxResult
     {

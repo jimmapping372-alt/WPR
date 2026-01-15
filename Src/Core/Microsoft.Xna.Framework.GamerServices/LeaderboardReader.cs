@@ -50,5 +50,16 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             return StubUtils.ForeverTask;
         }
+
+        //public IAsyncResult TotalLeaderboardSize()
+        //{
+        //    return StubUtils.ForeverTask;
+        //}
+
+
+        public Int32 TotalLeaderboardSize()
+        {
+            return 3;
+        }
     }
 }

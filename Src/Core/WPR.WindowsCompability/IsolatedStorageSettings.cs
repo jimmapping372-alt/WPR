@@ -1,4 +1,4 @@
-﻿//using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -7,22 +7,21 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.IsolatedStorage;
 using System.Runtime.Serialization;
-
 using WPR.Common;
 
 namespace WPR.WindowsCompability
 {
-    public sealed class IsolatedStorageSettings : IDictionary<string, object>, IDictionary,
+    public sealed class IsolatedStorageSettings1 : IDictionary<string, object>, IDictionary,
         ICollection<KeyValuePair<string, object>>, ICollection,
         IEnumerable<KeyValuePair<string, object>>, IEnumerable
     {
-        private static IsolatedStorageSettings _ApplicationSettings;
+        private static IsolatedStorageSettings1 _ApplicationSettings;
         private const string LocalSettingsName = "__LocalSettings";
 
         private IsolatedStorageFile _Holder;
         private Dictionary<string, object> _Settings;
 
-        internal IsolatedStorageSettings(IsolatedStorageFile file)
+        internal IsolatedStorageSettings1(IsolatedStorageFile file)
         {
             _Holder = file;
             if (!file.FileExists(LocalSettingsName))
@@ -30,18 +29,21 @@ namespace WPR.WindowsCompability
                 _Settings = new Dictionary<string, object>();
             } else
             {
-                using (IsolatedStorageFileStream fs = file.OpenFile(LocalSettingsName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (IsolatedStorageFileStream fs = file.OpenFile(
+                    LocalSettingsName, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
                     using (StreamReader sr = new StreamReader(fs))
                     {
-                        DataContractSerializer reader = new DataContractSerializer(typeof(Dictionary<string, object>));
+                        DataContractSerializer reader = new DataContractSerializer(
+                            typeof(Dictionary<string, object>));
                         try
                         {
                             _Settings = (reader.ReadObject(fs) as Dictionary<string, object>)!;
                         }
                         catch (Exception ex)
                         {
-                            Log.Error(LogCategory.Common, $"Failed to deserialize isolated settings. Error\n {ex}");
+                            Log.Error(LogCategory.Common, 
+                                $"Failed to deserialize isolated settings. Error\n {ex}");
                         }
 
                         if (_Settings == null)
@@ -53,7 +55,7 @@ namespace WPR.WindowsCompability
             }
         }
 
-        ~IsolatedStorageSettings()
+        ~IsolatedStorageSettings1()
         {
             Save();
         }
@@ -68,13 +70,15 @@ namespace WPR.WindowsCompability
         }
 
 
-        public static IsolatedStorageSettings ApplicationSettings
+        public static IsolatedStorageSettings1 ApplicationSettings
         {
             get
             {
                 if (_ApplicationSettings == null)
                 {
-                    _ApplicationSettings = new IsolatedStorageSettings(IsolatedStorageFile.GetUserStoreForApplication());
+                    _ApplicationSettings = new 
+                        IsolatedStorageSettings1(
+                            IsolatedStorageFile.GetUserStoreForApplication());
                 }
 
                 return _ApplicationSettings;
@@ -178,50 +182,12 @@ namespace WPR.WindowsCompability
 
         public void CopyTo(KeyValuePair<string, object>[] array, int arrayIndex)
         {
-            if (array == null) throw new ArgumentNullException(nameof(array));
-            if (arrayIndex < 0 || arrayIndex > array.Length) throw new ArgumentOutOfRangeException(nameof(arrayIndex));
-            if (array.Length - arrayIndex < _Settings.Count) throw new ArgumentException("The destination array has insufficient space.");
-
-            int i = arrayIndex;
-            foreach (var kv in _Settings)
-            {
-                array[i++] = kv;
-            }
+            throw new System.NotImplementedException();
         }
 
         public void CopyTo(Array array, int index)
         {
-            if (array == null) throw new ArgumentNullException(nameof(array));
-            if (index < 0 || index > array.Length) throw new ArgumentOutOfRangeException(nameof(index));
-            if (array.Length - index < _Settings.Count) throw new ArgumentException("The destination array has insufficient space.");
-
-            if (array is KeyValuePair<string, object>[] pairs)
-            {
-                CopyTo(pairs, index);
-                return;
-            }
-
-            if (array is DictionaryEntry[] dictEntries)
-            {
-                int i = index;
-                foreach (var kv in _Settings)
-                {
-                    dictEntries[i++] = new DictionaryEntry(kv.Key, kv.Value);
-                }
-                return;
-            }
-
-            if (array is object[] objects)
-            {
-                int i = index;
-                foreach (var kv in _Settings)
-                {
-                    objects[i++] = new KeyValuePair<string, object>(kv.Key, kv.Value);
-                }
-                return;
-            }
-
-            throw new ArgumentException("Invalid array type", nameof(array));
+            throw new NotImplementedException();
         }
 
         public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
@@ -249,6 +215,7 @@ namespace WPR.WindowsCompability
             return _Settings.TryGetValue(key, out value);
         }
 
+       
         IEnumerator IEnumerable.GetEnumerator()
         {
             return _Settings.GetEnumerator();
@@ -256,36 +223,7 @@ namespace WPR.WindowsCompability
 
         IDictionaryEnumerator IDictionary.GetEnumerator()
         {
-            return new DictionaryEntryEnumerator(_Settings.GetEnumerator());
-        }
-
-        private class DictionaryEntryEnumerator : IDictionaryEnumerator
-        {
-            private readonly IEnumerator<KeyValuePair<string, object>> _inner;
-
-            public DictionaryEntryEnumerator(IEnumerator<KeyValuePair<string, object>> inner)
-            {
-                _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-            }
-
-            public DictionaryEntry Entry
-            {
-                get
-                {
-                    var cur = _inner.Current;
-                    return new DictionaryEntry(cur.Key, cur.Value);
-                }
-            }
-
-            public object Key => _inner.Current.Key;
-
-            public object Value => _inner.Current.Value;
-
-            public object Current => Entry;
-
-            public bool MoveNext() => _inner.MoveNext();
-
-            public void Reset() => _inner.Reset();
+            return _Settings.GetEnumerator();
         }
     }
 }

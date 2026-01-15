@@ -38,7 +38,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return false; //!
             }
         }
 
