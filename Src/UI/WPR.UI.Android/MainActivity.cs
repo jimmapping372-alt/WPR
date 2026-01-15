@@ -1,36 +1,258 @@
+﻿using System;
 using Android.App;
+using Android.Content;
 using Android.Content.PM;
-using Avalonia;
+using AndroidX.Activity.Result.Contract;
+using AndroidX.Activity.Result;
 using Avalonia.Android;
-using Avalonia.Markup.Xaml;
-//using Avalonia.ReactiveUI;
+using Avalonia;
+
+using Projektanker.Icons.Avalonia;
+using Projektanker.Icons.Avalonia.FontAwesome;
+
+using System.IO;
+using Android.OS;
+using Avalonia.ReactiveUI;
+
+using Newtonsoft.Json;
+using WPR.Common;
+using System.Collections.Generic;
+using Android.Util;
+using Android.Widget;
+
+#if !DEBUG
+using Xamarin.Android.AssemblyStore;
+#else
+using System.IO.Compression;
+#endif
 
 namespace WPR.UI.Android
 {
-    //[Activity(Label = "WPR", MainLauncher = true, ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation | ConfigChanges.UiMode | ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize)]
+    internal class GameActivityResultCallback : Java.Lang.Object, IActivityResultCallback
+    {
+        private MainActivity _Owning;
+
+        public GameActivityResultCallback(MainActivity activity)
+        {
+            _Owning = activity;
+        }
+
+        public void OnActivityResult(Java.Lang.Object result)
+        {
+            //MessageBoxUtils.MainActivity = _Owning;
+            Directory.SetCurrentDirectory(_Owning.CurrentDirectoryForMain);
+
+            ActivityResult resultAct = (result as ActivityResult)!;
+            if (resultAct.ResultCode != (int)Result.Ok)
+            {
+                WPR.Common.Log.Error(LogCategory.AppList, $"Game run error: {resultAct.Data.GetStringExtra(GameActivity.ErrorDataName)!}");
+
+                new AlertDialog.Builder(/*MessageBoxUtils.MainActivity!*/default)!
+                    .SetTitle(Properties.Resources.AppRunError)!
+                    .SetMessage(Properties.Resources.ExceptionRunApp)!
+                    .Show();
+            }
+        }
+    }
+
     [Activity(Label = "WPR.Android", Theme = "@style/MyTheme.NoActionBar", Icon = "@drawable/icon", LaunchMode = LaunchMode.SingleInstance, ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize)]
-    public class MainActivity : AvaloniaMainActivity<App>
+    public class MainActivity : AvaloniaMainActivity//AvaloniaActivity<App>
     {
-    }
-
-    public class App : Avalonia.Application
-    {
-        public override void Initialize()
+        private ActivityResultLauncher ActivitySpawner;
+        private static List<string> CopyAssemblyList = new List<string>
         {
-            AvaloniaXamlLoader.Load(this);
-        }
-    }
+            "FNA"
+        };
 
-    public static class Program
-    {
-        public static void Main(string[] args)
+        public string CurrentDirectoryForMain
         {
-            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            get
+            {
+                return Path.Combine(GetExternalFilesDir(null)!.AbsolutePath, "PatchAssemblies");
+            }
         }
 
-        public static AppBuilder BuildAvaloniaApp()
-            => AppBuilder.Configure<App>();
-                //.UsePlatformDetect()
-                //.UseReactiveUI();
+        public MainActivity()
+        {
+            // Keep constructor minimal; register activity results in OnCreate when Activity is initialized
+        }
+
+        // Because DLLs files are in APK. Monodroid has their own way of extracting and getting these dlls out.
+        // But Cecil just read it from stream. It's hard. So we extract a subset of needed DLLs beforehand
+        public void SetupDllPatchForCecil()
+        {
+            string basePath = CurrentDirectoryForMain;
+            Directory.CreateDirectory(basePath);
+
+            string? apkPath = Application?.ApplicationInfo?.PublicSourceDir;
+            if (apkPath == null)
+            {
+                WPR.Common.Log.Warn(LogCategory.Android, "Unable to copy DLLs needed for patching! Some games may fail to patch!");
+                return;
+            }
+#if DEBUG
+
+            using (ZipArchive archive = ZipFile.Open(apkPath, ZipArchiveMode.Read))
+            {
+                foreach (var dll in CopyAssemblyList)
+                {
+                    ZipArchiveEntry? entry = archive.GetEntry($"assemblies/{dll}.dll");
+                    if (entry == null)
+                    {
+                        WPR.Common.Log.Warn(LogCategory.Android, $"Fail to copy DLL ${dll} to patch assembly folder!");
+                    }
+                    else
+                    {
+                        entry.ExtractToFile(Path.Combine(basePath, dll), true);
+                    }
+                }
+            }
+#else
+            AssemblyStoreExplorer explorer = new AssemblyStoreExplorer(apkPath, keepStoreInMemory: true);
+            foreach (var dll in CopyAssemblyList)
+            {
+                string filename = $"{dll}.dll.comp";
+                string filenameAuth = $"{dll}.dll";
+
+                if (explorer.AssembliesByName.ContainsKey(dll))
+                {
+                    explorer.AssembliesByName[dll].ExtractImage(basePath, filename);
+                }
+                else
+                {
+                    WPR.Common.Log.Warn(LogCategory.Android, $"Fail to copy DLL ${dll} to patch assembly folder (entry not found)!");
+                    continue;
+                }
+
+                bool fileShouldMove = false;
+
+                using (FileStream stream = new FileStream(Path.Combine(basePath, filename), FileMode.Open, FileAccess.Read))
+                {
+                    if (AssemblyDecompressor.IsCompressed(stream))
+                    {
+                        stream.Seek(0, SeekOrigin.Begin);
+                        
+                        using (FileStream streamAuth = new FileStream(Path.Combine(basePath, filenameAuth), FileMode.OpenOrCreate, FileAccess.Write))
+                        {
+                            if (!AssemblyDecompressor.Work(stream, streamAuth))
+                            {
+                                WPR.Common.Log.Warn(LogCategory.Android, $"Fail to decompress DLL ${dll} to patch assembly folder (entry not found)!");
+                            }
+                        }
+                    } else
+                    {
+                        fileShouldMove = true;
+                    }
+                }
+
+                if (fileShouldMove)
+                {
+                    File.Move(Path.Combine(basePath, filename), Path.Combine(basePath, filenameAuth));
+                } else
+                {
+                    File.Delete(Path.Combine(basePath, filename));
+                }
+            }
+#endif
+
+            Directory.SetCurrentDirectory(basePath);
+        }
+
+        public void SetupConfigurationAndDatabase()
+        {
+            Configuration.Current = new Configuration(GetExternalFilesDir(null)!.AbsolutePath);
+
+            //Filesystem.CopyFolderFromAssets(Assets!, "Database/TrueAchievements", Configuration.Current.DataPath("Database/TrueAchievements"));
+
+            //if (!File.Exists(Configuration.Current.DataPath("Database/achievements.db")))
+            //{
+            //    Filesystem.CopyFileFromAssets(Assets!, "Database/achievements.db", Configuration.Current.DataPath("Database/achievements.db"));
+            //}
+
+            if (!File.Exists(Configuration.Current.DataPath("Database/applications.db")))
+            {
+                //Filesystem.CopyFileFromAssets(Assets!, "Database/applications.db", Configuration.Current.DataPath("Database/applications.db"));
+            }
+        }
+
+        protected override void OnCreate(Bundle? savedInstanceState)
+        {
+            SetupConfigurationAndDatabase();
+            SetupDllPatchForCecil();
+
+            //MessageBoxUtils.MainActivity = this;
+            ServicesSetup.Start();
+            NativeUI.Initialize(this);
+
+            // Register activity result launcher now that Activity is created
+            ActivitySpawner = RegisterForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+                new GameActivityResultCallback(this));
+
+            ApplicationLaunchRequest.Incoming += (sender, args) =>
+            {
+                RunOnUiThread(() =>
+                {
+                    var launchIntent = new Intent(this, typeof(GameActivity));
+                    launchIntent.PutExtra(GameActivity.TargetApplicationDataName, JsonConvert.SerializeObject(args.Target));
+
+                    ActivitySpawner.Launch(launchIntent);
+                });
+            };
+
+            base.OnCreate(savedInstanceState);
+
+            // Startup logging & health-check
+            try
+            {
+                try { MessageBoxUtils.MainActivity = this; } catch { }
+
+                global::Android.Util.Log.Info("WPR", "OnCreate completed - scheduling Avalonia UI checks");
+
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    try
+                    {
+                        var app = Avalonia.Application.Current;
+                        var appType = app != null ? app.GetType().FullName : "<null>";
+                        global::Android.Util.Log.Info("WPR", $"Avalonia.Application.Current = {appType}");
+
+                        try
+                        {
+                            global::Android.Widget.Toast.MakeText(this, "Avalonia UI thread ready", ToastLength.Short).Show();
+                        }
+                        catch (Exception exToast)
+                        {
+                            global::Android.Util.Log.Error("WPR", $"Toast failed: {exToast}");
+                        }
+
+                        try
+                        {
+                            // Fire-and-forget health-check dialog on Android
+                            _ = MessageBoxUtils.GetMessageDialogResult(
+                                title: "Health check",
+                                text: "UI initialized",
+                                icon: MessageBox.Avalonia.Enums.Icon.Info,
+                                buttons: MessageBox.Avalonia.Enums.ButtonEnum.Ok,
+                                modalOnWindow: false);
+
+                            global::Android.Util.Log.Info("WPR", "Health-check dialog requested");
+                        }
+                        catch (Exception exBox)
+                        {
+                            global::Android.Util.Log.Error("WPR", $"Health-check dialog failed: {exBox}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        global::Android.Util.Log.Error("WPR", $"Avalonia UI check failed: {ex}");
+                        try { global::Android.Widget.Toast.MakeText(this, "UI check failed", ToastLength.Short).Show(); } catch { }
+                    }
+                });
+            }
+            catch (Exception exOuter)
+            {
+                global::Android.Util.Log.Error("WPR", $"Failed to schedule UI checks: {exOuter}");
+            }
+        }
     }
 }

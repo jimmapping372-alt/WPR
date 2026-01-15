@@ -3,11 +3,13 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:ic="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
-             xmlns:dialogHost="clr-namespace:DialogHost;assembly=DialogHost.Avalonia"
+             
 			 mc:Ignorable="d" d:DesignWidth="720" d:DesignHeight="1520"
              x:Class="WPR.UI.Views.MainViewMobile">
 
-	<dialogHost:DialogHost>
+  <!--xmlns:dialogHost="clr-namespace:DialogHost;assembly=DialogHost.Avalonia"-->
+
+  <!--dialogHost:DialogHost-->
 		<Panel>
 			<Grid>
 				<Grid.RowDefinitions>
@@ -40,7 +42,7 @@
 					<TabItem HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch" Margin="10,0,0,0">
 						<TabItem.Header>
 							<StackPanel Orientation="Vertical" HorizontalAlignment="Stretch">
-								<ic:Icon Value="fa-duotone fa-gear" FontSize="20" />
+								<ic:Icon Value="fa-solid fa-gear" FontSize="20" />
 								<Label Content="Settings" HorizontalContentAlignment="Center" FontSize="20" Margin="0,5,0,0" HorizontalAlignment="Stretch"/>
 							</StackPanel>
 						</TabItem.Header>
@@ -58,5 +60,5 @@
 				</TabControl>
 			</Grid>
 		</Panel>
-	</dialogHost:DialogHost>
+  <!--/dialogHost:DialogHost-->
 </UserControl>

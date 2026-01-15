@@ -134,6 +134,8 @@ namespace WPR.UI.ViewModels
                 .Throttle(TimeSpan.FromMilliseconds(20))
                 .ObserveOn(RxApp.MainThreadScheduler)
                 .Subscribe(text => UpdateApplicationList(text));
+
+            UpdateApplicationList(SearchText);
         }
             
             private async Task RunApplicationAsync(ApplicationItemViewModel app) {

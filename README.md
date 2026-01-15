@@ -3,7 +3,7 @@
 
 WPR is a WP7-8 XNA app runner. This is only my fork of [WPR](https://github.com/8212369/WPR), not the original. 
 
-NOTE: previous *dev* branch copied to "experimental" one. In my new "dev" branch I cancelled my "iOS / XBox" dream (not enough skills, heh!). 
+NOTE: previous *dev* branch copied to "experimental" one. In my new "dev" branch I cancelled my "iOS / XBox" dream (not enough skills, heh!) and returned to Avalonia……… 
 
 CAUTION: _dev_ branch may not build / run normally. This is work-in-progress!
 
@@ -21,10 +21,10 @@ CAUTION: _dev_ branch may not build / run normally. This is work-in-progress!
 - Fixed errors related to MessageBox and namespaces
 - Fixed bugs related to ViewLocator and Avalonia
 - Performed a test build using MSBuild, which was successful without errors (warnings only)
-- Now WPR 0.0.15 contains all the features from version 0.0.12, but with a modern engine.NET 8 and Avalonia 11.3.9. The application is successfully built and ready for use.
+- Now WPR contains all the features from version 0.0.12, but with a modern engine .NET 8 and Avalonia 11.3.9.
 
 ## Status
-- Build ok! I started experimenting with .NET 8 & Avalonia _11.3.9_. I started to repair Android part of solution & Desktop (Windows) part of solution too. So, *avalonia* branch consists of 2 targets: Windows & Android at now :)
+- Build ok? (or not ok after my last commit, heh!). I started experimenting with .NET 8 & Avalonia _11.3.9_. I started to repair Android part of solution & Desktop (Windows) part of solution too. So, *avalonia* branch consists of 2 targets: Windows & Android at now :)
 - With help of Trial mode of WindSurf (and ChatGPT 4 AI) I partially repaired Android-related parts of WPR code... But this is still work-in-progress: 100500 new errors (because of Avalonia 11 incompatibility with Avalonia 9 / 10), and many game "patches" lost!
 - Experimental "UI improvements applied ("Two small Run and Uninstall" icons added to main/larg icon in app/game list) lost. No "Run & App at popup/context menu".
 - All AI-generated things not tested yet 
@@ -33,10 +33,11 @@ CAUTION: _dev_ branch may not build / run normally. This is work-in-progress!
 
 ## Tech. details
 - Newest VS 2022 or above must be used to "assemble" (build) this _avalonia_ branch
-- I think that WPR 0.0.15 "avalonia edition" incompatible with Windows 10 because of .NET 8... So, fresh Windows 11 OS needed to run WPR (however, some reduced Windows 11 Tiny is good choice even for some very retro-notebooks).
+- WPR 0.0.16 "avalonia edition" may be incompatible with Windows 10 because of .NET 8... So, fresh Windows 11 OS recommender to run WPR.UI.Desktop (however, some reduced Windows 11 Tiny is good choice even for some very retro-notebooks!).
 
 
-## ToDo
+## TODO
+- Solve Desktop (Windows) app mulfunction
 - Solve "White screen instead of App UI" bug for Android target 
 - Repair lost game patches (use "avalonia-win" branch) 
 - Test Desktop (Windows) target
@@ -58,6 +59,6 @@ CAUTION: _dev_ branch may not build / run normally. This is work-in-progress!
 AS IS. No support. Developers / Geeks only. "DIY mode"
 
 ## ::
-[m][e] 2026
+[m][e] Jan 14, 2026
 
 ![](Images/footer.png)

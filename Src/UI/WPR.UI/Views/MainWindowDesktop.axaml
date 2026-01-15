@@ -3,9 +3,8 @@
         xmlns:vm="clr-namespace:WPR.UI.Pages"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-		xmlns:dialogHost="clr-namespace:DialogHost;assembly=DialogHost.Avalonia"
-        mc:Ignorable="d" d:DesignWidth="1920" d:DesignHeight="1080"
-		xmlns:ic="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+		    mc:Ignorable="d" d:DesignWidth="1920" d:DesignHeight="1080"
+		    xmlns:ic="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
         x:Class="WPR.UI.Views.MainWindowDesktop"
         Icon="/Assets/avalonia-logo.ico"
         Title="WPR 0.0.16-alpha"
@@ -13,8 +12,7 @@
 		Background= "Transparent"
 		Name="MainWindow">
 
-	<dialogHost:DialogHost>
-		<Panel>
+	 <Panel>
 			<ExperimentalAcrylicBorder IsHitTestVisible="False">
 				<ExperimentalAcrylicBorder.Material>
 					<ExperimentalAcrylicMaterial
@@ -49,7 +47,7 @@
 					<TabItem HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch" Margin="10,0,0,0">
 						<TabItem.Header>
 							<StackPanel Orientation="Vertical" HorizontalAlignment="Stretch">
-								<ic:Icon Value="fa-duotone fa-gear" FontSize="30" />
+								<ic:Icon Value="fa-solid fa-gear" FontSize="30" />
 								<Label Content="Settings" HorizontalContentAlignment="Center" Margin="0,5,0,0" HorizontalAlignment="Stretch"/>
 							</StackPanel>
 						</TabItem.Header>
@@ -72,5 +70,4 @@
 				</TransitioningContentControl>
 			</Grid>
 		</Panel>
-	</dialogHost:DialogHost>
 </Window>

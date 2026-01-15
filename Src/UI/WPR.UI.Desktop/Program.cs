@@ -1,4 +1,4 @@
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.ReactiveUI;
 using Projektanker.Icons.Avalonia;
 using Projektanker.Icons.Avalonia.FontAwesome;
@@ -42,9 +42,13 @@ namespace WPR.UI.Desktop
 
         // Avalonia configuration, don't remove; also used by visual designer.
         public static AppBuilder BuildAvaloniaApp()
-            => AppBuilder.Configure<App>()
-                .UsePlatformDetect()
-                .LogToTrace()
-                .UseReactiveUI();
+        {
+            return AppBuilder.Configure<App>()
+                        .UsePlatformDetect()
+                        .WithIcons(container => container
+                            .Register<FontAwesomeIconProvider>())
+                        .LogToTrace()
+                        .UseReactiveUI();
+        }
     }
 }

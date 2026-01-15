@@ -14,7 +14,7 @@ namespace Projektanker.Icons.Avalonia
 
         static Attached()
         {
-            IconProperty.Changed.Subscribe(IconChanged);
+            IconProperty.Changed.Subscribe(new AvaloniaChangedObserver(IconChanged));
         }
 
         /// <summary>
@@ -44,6 +44,16 @@ namespace Projektanker.Icons.Avalonia
             {
                 Value = value,
             };
+        }
+
+        // Adapter to allow using Subscribe with action
+        class AvaloniaChangedObserver : IObserver<AvaloniaPropertyChangedEventArgs>
+        {
+            private readonly Action<AvaloniaPropertyChangedEventArgs> _action;
+            public AvaloniaChangedObserver(Action<AvaloniaPropertyChangedEventArgs> action) => _action = action;
+            public void OnCompleted() { }
+            public void OnError(Exception error) { }
+            public void OnNext(AvaloniaPropertyChangedEventArgs value) => _action(value);
         }
     }
 }

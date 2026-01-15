@@ -1,12 +1,13 @@
 ﻿using System;
-using System.Reactive.Linq;
+using System.Reflection;
 using Avalonia;
 using Avalonia.Controls.Primitives;
 using Avalonia.Media;
+using Avalonia.Styling;
 
 namespace Projektanker.Icons.Avalonia
 {
-    public class Icon : TemplatedControl
+    public partial class Icon : TemplatedControl
     {
         public static readonly DirectProperty<Icon, DrawingImage> DrawingImageProperty =
             AvaloniaProperty.RegisterDirect<Icon, DrawingImage>(nameof(DrawingImage), o => o.DrawingImage);
@@ -17,19 +18,13 @@ namespace Projektanker.Icons.Avalonia
         public static readonly StyledProperty<IconAnimation> AnimationProperty =
             AvaloniaProperty.Register<Icon, IconAnimation>(nameof(Animation));
 
-        private DrawingImage _drawingImage;
+        private DrawingImage _drawingImage = default!;
 
         static Icon()
         {
-            ValueProperty.Changed
-                .Select(e => e.Sender)
-                .OfType<Icon>()
-                .Subscribe(icon => icon.OnValueChanged());
-
-            ForegroundProperty.Changed
-                .Select(e => e.Sender)
-                .OfType<Icon>()
-                .Subscribe(icon => icon.OnForegroundChanged());
+            // Use AddClassHandler to respond to property changes in a version-safe way
+            ValueProperty.Changed.AddClassHandler<Icon>((icon, e) => icon.OnValueChanged());
+            ForegroundProperty.Changed.AddClassHandler<Icon>((icon, e) => icon.OnForegroundChanged());
         }
 
         public DrawingImage DrawingImage
@@ -52,12 +47,45 @@ namespace Projektanker.Icons.Avalonia
 
         private void OnValueChanged()
         {
-            var iconProvider = AvaloniaLocator.Current.GetService<IIconReader>();
+            object? iconProviderObj = null;
+
+            // Try several locator access patterns via reflection for compatibility across Avalonia versions
+            try
+            {
+                var avaloniaLocatorType = typeof(AvaloniaLocator);
+                var currentProp = avaloniaLocatorType.GetProperty("Current", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+                if (currentProp == null)
+                    currentProp = avaloniaLocatorType.GetProperty("Instance", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+
+                if (currentProp != null)
+                {
+                    var locator = currentProp.GetValue(null);
+                    if (locator != null)
+                    {
+                        var getServiceMethod = locator.GetType().GetMethod("GetService", new Type[] { typeof(Type) });
+                        if (getServiceMethod != null)
+                        {
+                            iconProviderObj = getServiceMethod.Invoke(locator, new object[] { typeof(IIconReader) });
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // swallow - fallback handled below
+            }
+
+            if (iconProviderObj is not IIconReader iconProvider)
+            {
+                // No provider available; nothing to do
+                return;
+            }
+
             string path = iconProvider.GetIconPath(Value);
-            var drawing = new GeometryDrawing()
+            GeometryDrawing drawing = new GeometryDrawing()
             {
                 Geometry = Geometry.Parse(path),
-                Brush = Foreground ?? new SolidColorBrush(0),
+                Brush = Foreground ?? Brushes.Black,
             };
 
             DrawingImage = new DrawingImage { Drawing = drawing };

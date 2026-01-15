@@ -7,11 +7,9 @@
     </Application.DataTemplates>
 
     <Application.Styles>
-        <FluentTheme/>
-		<StyleInclude Source="avares://DialogHost.Avalonia/Styles.xaml"/>
-
-		<Style Selector="Label">
-			<Setter Property="Foreground" Value="White" />
-		</Style>
+     <FluentTheme/>
+      <Style Selector="Label">
+			  <Setter Property="Foreground" Value="White" />
+		  </Style>
     </Application.Styles>
 </Application>

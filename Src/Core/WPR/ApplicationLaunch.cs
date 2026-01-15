@@ -84,20 +84,135 @@ namespace WPR
                         };
                     }
 
-                    obj.Run();
-
                     try
                     {
-                        PhoneApplicationService.Current!.HandleApplicationExit();
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Warn(LogCategory.AppList, $"Ignored clean-up exception:\n {ex}");
-                    }
+                        // Run the game and capture any exceptions to produce richer diagnostics.
+                        try
+                        {
+                            obj.Run();
+                        }
+                        catch (Exception ex)
+                        {
+                            try
+                            {
+                                string diag = BuildDiagnostics(obj, ex);
 
-                    obj.Exit();
+                                // Log to the configured logger
+                                Log.Error(LogCategory.AppList, $"Game threw during Run: {ex}");
+
+                                // Also try to write diagnostics to a file next to the game's folder so it survives process exits
+                                try
+                                {
+                                    string diagFile = Path.Combine(folderPath, "wpr_game_diagnostic.txt");
+                                    File.WriteAllText(diagFile, diag);
+                                }
+                                catch (Exception fileEx)
+                                {
+                                    Log.Warn(LogCategory.AppList, $"Failed to write diagnostic file: {fileEx}");
+                                }
+                            }
+                            catch (Exception logEx)
+                            {
+                                // Avoid swallowing the original exception but at least log that diagnostics failed
+                                Log.Warn(LogCategory.AppList, $"Diagnostics failed: {logEx}");
+                            }
+
+                            // Rethrow so outer code still receives the original failure
+                            throw;
+                        }
+
+                        try
+                        {
+                            PhoneApplicationService.Current!.HandleApplicationExit();
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Warn(LogCategory.AppList, $"Ignored clean-up exception:\n {ex}");
+                        }
+
+                        obj.Exit();
+                    }
+                    finally
+                    {
+                        // Ensure current directory is restored to previous value to avoid surprising callers
+                        try
+                        {
+                            Directory.SetCurrentDirectory(curDir);
+                        }
+                        catch { }
+                    }
                 }
             });
+        }
+
+        private static string BuildDiagnostics(Game? obj, Exception ex)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("=== WPR Game Diagnostic ===");
+            sb.AppendLine("Timestamp: " + DateTime.UtcNow.ToString("o"));
+            sb.AppendLine();
+
+            sb.AppendLine("Exception:");
+            sb.AppendLine(ex.ToString());
+            sb.AppendLine();
+
+            if (obj == null)
+            {
+                sb.AppendLine("Game instance is null.");
+                return sb.ToString();
+            }
+
+            try
+            {
+                Type t = obj.GetType();
+                sb.AppendLine($"Game type: {t.FullName}");
+
+                // Common Game properties
+                try { sb.AppendLine($"Window: {(obj.Window == null ? "<null>" : obj.Window.GetType().FullName)}"); } catch { sb.AppendLine("Window: <error>"); }
+                try { sb.AppendLine($"Window.Title: {(obj.Window?.Title ?? "<null>")}"); } catch { sb.AppendLine("Window.Title: <error>"); }
+                try { sb.AppendLine($"GraphicsDevice: {(obj.GraphicsDevice == null ? "<null>" : obj.GraphicsDevice.GetType().FullName)}"); } catch { sb.AppendLine("GraphicsDevice: <error>"); }
+                try { sb.AppendLine($"Content: {(obj.Content == null ? "<null>" : obj.Content.GetType().FullName)}"); } catch { sb.AppendLine("Content: <error>"); }
+                try { sb.AppendLine($"Services: {(obj.Services == null ? "<null>" : obj.Services.GetType().FullName)}"); } catch { sb.AppendLine("Services: <error>"); }
+
+                sb.AppendLine();
+
+                // Inspect instance fields and properties (best-effort, do not throw)
+                sb.AppendLine("Instance fields:");
+                foreach (var field in t.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public))
+                {
+                    try
+                    {
+                        object? val = field.GetValue(obj);
+                        sb.AppendLine($"- {field.Name} ({field.FieldType.FullName}): {(val == null ? "<null>" : val.GetType().FullName)}");
+                    }
+                    catch (Exception fex)
+                    {
+                        sb.AppendLine($"- {field.Name}: <error reading> {fex.Message}");
+                    }
+                }
+
+                sb.AppendLine();
+                sb.AppendLine("Instance properties:");
+                foreach (var prop in t.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+                {
+                    if (!prop.CanRead) continue;
+                    try
+                    {
+                        object? val = prop.GetValue(obj);
+                        sb.AppendLine($"- {prop.Name} ({prop.PropertyType.FullName}): {(val == null ? "<null>" : val.GetType().FullName)}");
+                    }
+                    catch (Exception pex)
+                    {
+                        sb.AppendLine($"- {prop.Name}: <error reading> {pex.Message}");
+                    }
+                }
+            }
+            catch (Exception outer)
+            {
+                sb.AppendLine("Failed to build full diagnostics: " + outer);
+            }
+
+            return sb.ToString();
         }
     }
 }
