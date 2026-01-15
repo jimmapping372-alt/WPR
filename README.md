@@ -7,13 +7,14 @@ NOTE: previous *dev* branch copied to "experimental" one. In my new "dev" branch
 
 CAUTION: _dev_ branch may not build / run normally. This is work-in-progress!
 
+## Screenshots
+![](Images/sshot01.png)
+![](Images/sshot02.png)
+
 
 ## What's new in dev?
-- I have successfully completed the task of merging versions of WPR 0.0.12 and WPR 0.0.15 with the addition of the required functions:
-- I analyzed both versions of WPR (0.0.12 and 0.0.15) and found differences
-- Identified key features from WPR 0.0.12 that needed to be combined with WPR 0.0.15
 - Developed a merger strategy based on compatibility with .NET 8 and Avalonia 11.3.9
-- Combined functions from version 0.0.12 to 0.0.15
+- Merged functions from version 0.0.12 to 0.0.16
 - Added explicit logging of Avalonia initialization for launching and displaying in the main window
 - Added a small health check window to confirm the creation of a UI thread and window
 - Fixed all critical errors that interfere with the build.:
@@ -21,14 +22,15 @@ CAUTION: _dev_ branch may not build / run normally. This is work-in-progress!
 - Fixed errors related to MessageBox and namespaces
 - Fixed bugs related to ViewLocator and Avalonia
 - Performed a test build using MSBuild, which was successful without errors (warnings only)
-- Now WPR contains all the features from version 0.0.12, but with a modern engine .NET 8 and Avalonia 11.3.9.
+
 
 ## Status
-- Build ok? (or not ok after my last commit, heh!). I started experimenting with .NET 8 & Avalonia _11.3.9_. I started to repair Android part of solution & Desktop (Windows) part of solution too. So, *avalonia* branch consists of 2 targets: Windows & Android at now :)
+- Build ok... I started experimenting with .NET 8 & Avalonia _11.3.9_. I started to repair Android part of solution & Desktop (Windows) part of solution too. So, *avalonia* branch consists of 2 targets: Windows & Android at now :)
 - With help of Trial mode of WindSurf (and ChatGPT 4 AI) I partially repaired Android-related parts of WPR code... But this is still work-in-progress: 100500 new errors (because of Avalonia 11 incompatibility with Avalonia 9 / 10), and many game "patches" lost!
 - Experimental "UI improvements applied ("Two small Run and Uninstall" icons added to main/larg icon in app/game list) lost. No "Run & App at popup/context menu".
 - All AI-generated things not tested yet 
 - For Android target, I changed Min. Supported Android Api version from 21 to 26 in project (.csproj) files. 
+- Exploring some "game run failed" bugs (Penguins Can't Fly, Acedia Horror, etc.) 
 
 
 ## Tech. details
@@ -37,7 +39,7 @@ CAUTION: _dev_ branch may not build / run normally. This is work-in-progress!
 
 
 ## TODO
-- Solve Desktop (Windows) app mulfunction
+- Solve Desktop (Windows) game start bugs (after .NET 8 / Avalonia 11.3 upgrade)
 - Solve "White screen instead of App UI" bug for Android target 
 - Repair lost game patches (use "avalonia-win" branch) 
 - Test Desktop (Windows) target
@@ -59,6 +61,6 @@ CAUTION: _dev_ branch may not build / run normally. This is work-in-progress!
 AS IS. No support. Developers / Geeks only. "DIY mode"
 
 ## ::
-[m][e] Jan 14, 2026
+[m][e] 2026
 
 ![](Images/footer.png)

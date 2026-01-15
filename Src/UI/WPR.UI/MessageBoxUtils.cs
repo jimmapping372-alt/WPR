@@ -5,14 +5,17 @@ using System.Threading.Tasks;
 #if __ANDROID__
 using Android.App;
 using Android.Widget;
-#else
-using Avalonia.Controls;
-using Avalonia.Threading;
-#endif
-
-using MessageBox.Avalonia;
-using static System.Net.Mime.MediaTypeNames;
-
+  #else
+  using Avalonia.Controls;
+  using Avalonia.Threading;
+  using Avalonia.Layout;
+  using Avalonia.Media;
+  using Avalonia;
+  #endif
+  
+  using MessageBox.Avalonia;
+  using static System.Net.Mime.MediaTypeNames;
+  
 namespace WPR.UI
 {
     public static class MessageBoxUtils
@@ -122,19 +125,107 @@ namespace WPR.UI
             });
 
             return source.Task;
-#else
+  #else
             Func<Task<MessageBox.Avalonia.Enums.ButtonResult>> returnTaskFunc = () =>
             {
-                var msgBox = MessageBoxManager.GetMessageBoxStandardWindow(
-                    title: title,
-                    text: text,
-                    icon: icon,
-                    @enum: buttons,
-                    windowStartupLocation: WindowStartupLocation.CenterScreen);
-
-                return modalOnWindow ? msgBox.ShowDialog(MainWindow) : msgBox.Show();
+                try
+                {
+                    var msgBox = MessageBoxManager.GetMessageBoxStandardWindow(
+                        title: title,
+                        text: text,
+                        icon: icon,
+                        @enum: buttons,
+                        windowStartupLocation: WindowStartupLocation.CenterScreen);
+                    
+                    return modalOnWindow ? msgBox.ShowDialog(MainWindow) : msgBox.Show();
+                }
+                catch (System.MissingMethodException)
+                {
+                    var tcs = new TaskCompletionSource<MessageBox.Avalonia.Enums.ButtonResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    
+                    var w = new Window
+                    {
+                        Title = title,
+                        Width = 420,
+                        Height = 200,
+                        CanResize = false,
+                        WindowStartupLocation = WindowStartupLocation.CenterScreen
+                    };
+                    
+                    var panel = new StackPanel
+                    {
+                        Orientation = Orientation.Vertical,
+                        Spacing = 12,
+                        Margin = new Thickness(16)
+                    };
+                    
+                    var content = new TextBlock
+                    {
+                        Text = text,
+                        TextWrapping = TextWrapping.Wrap,
+                        Foreground = Brushes.White
+                    };
+                    
+                    var buttonsPanel = new StackPanel
+                    {
+                        Orientation = Orientation.Horizontal,
+                        HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+                        Spacing = 8
+                    };
+                    
+                    void CloseWith(MessageBox.Avalonia.Enums.ButtonResult r)
+                    {
+                        tcs.TrySetResult(r);
+                        w.Close();
+                    }
+                    
+                    void AddButton(string caption, MessageBox.Avalonia.Enums.ButtonResult r)
+                    {
+                        var b = new Button { Content = caption, MinWidth = 80 };
+                        b.Click += (_, __) => CloseWith(r);
+                        buttonsPanel.Children.Add(b);
+                    }
+                    
+                    switch (buttons)
+                    {
+                        case MessageBox.Avalonia.Enums.ButtonEnum.Ok:
+                            AddButton("OK", MessageBox.Avalonia.Enums.ButtonResult.Ok);
+                            break;
+                        case MessageBox.Avalonia.Enums.ButtonEnum.OkCancel:
+                            AddButton("Cancel", MessageBox.Avalonia.Enums.ButtonResult.Cancel);
+                            AddButton("OK", MessageBox.Avalonia.Enums.ButtonResult.Ok);
+                            break;
+                        case MessageBox.Avalonia.Enums.ButtonEnum.YesNo:
+                            AddButton("No", MessageBox.Avalonia.Enums.ButtonResult.No);
+                            AddButton("Yes", MessageBox.Avalonia.Enums.ButtonResult.Yes);
+                            break;
+                        case MessageBox.Avalonia.Enums.ButtonEnum.YesNoCancel:
+                            AddButton("Cancel", MessageBox.Avalonia.Enums.ButtonResult.Cancel);
+                            AddButton("No", MessageBox.Avalonia.Enums.ButtonResult.No);
+                            AddButton("Yes", MessageBox.Avalonia.Enums.ButtonResult.Yes);
+                            break;
+                        default:
+                            AddButton("OK", MessageBox.Avalonia.Enums.ButtonResult.Ok);
+                            break;
+                    }
+                    
+                    panel.Children.Add(content);
+                    panel.Children.Add(buttonsPanel);
+                    w.Content = panel;
+                    
+                    if (modalOnWindow && MainWindow != null)
+                    {
+                        _ = w.ShowDialog(MainWindow);
+                    }
+                    else
+                    {
+                        w.Show();
+                    }
+                    
+                    return tcs.Task;
+                }
             };
-
+            
             if (dispatchMain)
             {
                 return Dispatcher.UIThread.InvokeAsync(returnTaskFunc);
@@ -175,23 +266,81 @@ namespace WPR.UI
 
             return source.Task;
         }
-#else
+  #else
             Func<Task<string>> returnTaskFunc = async () =>
             {
-                var msgBox = MessageBoxManager.GetMessageBoxInputWindow(
-                    new MessageBox.Avalonia.DTO.MessageBoxInputParams()
+                try
+                {
+                    var msgBox = MessageBoxManager.GetMessageBoxInputWindow(
+                        new MessageBox.Avalonia.DTO.MessageBoxInputParams()
+                        {
+                            ContentTitle = title,
+                            ContentMessage = description,
+                            InputDefaultValue = defaultText,
+                            WindowStartupLocation = WindowStartupLocation.CenterScreen
+                        }
+                    );
+                    
+                    var result = await (isModal ? msgBox.ShowDialog(MainWindow) : msgBox.Show());
+                    return result.Message;
+                }
+                catch (System.MissingMethodException)
+                {
+                    var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    
+                    var w = new Window
                     {
-                        ContentTitle = title,
-                        ContentMessage = description,
-                        InputDefaultValue = defaultText,
+                        Title = title,
+                        Width = 420,
+                        Height = 220,
+                        CanResize = false,
                         WindowStartupLocation = WindowStartupLocation.CenterScreen
+                    };
+                    
+                    var panel = new StackPanel
+                    {
+                        Orientation = Orientation.Vertical,
+                        Spacing = 10,
+                        Margin = new Thickness(16)
+                    };
+                    
+                    var desc = new TextBlock { Text = description, TextWrapping = TextWrapping.Wrap, Foreground = Brushes.White };
+                    var input = new TextBox { Text = defaultText };
+                    
+                    var buttons = new StackPanel
+                    {
+                        Orientation = Orientation.Horizontal,
+                        HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+                        Spacing = 8
+                    };
+                    
+                    var btnCancel = new Button { Content = "Cancel", MinWidth = 80 };
+                    btnCancel.Click += (_, __) => { tcs.TrySetResult(defaultText); w.Close(); };
+                    
+                    var btnOk = new Button { Content = "OK", MinWidth = 80 };
+                    btnOk.Click += (_, __) => { tcs.TrySetResult(input.Text ?? defaultText); w.Close(); };
+                    
+                    buttons.Children.Add(btnCancel);
+                    buttons.Children.Add(btnOk);
+                    
+                    panel.Children.Add(desc);
+                    panel.Children.Add(input);
+                    panel.Children.Add(buttons);
+                    w.Content = panel;
+                    
+                    if (isModal && MainWindow != null)
+                    {
+                        _ = w.ShowDialog(MainWindow);
                     }
-                );
-
-                var result = await (isModal ? msgBox.ShowDialog(MainWindow) : msgBox.Show());
-                return result.Message;
+                    else
+                    {
+                        w.Show();
+                    }
+                    
+                    return await tcs.Task;
+                }
             };
-
+            
             if (dispatchMain)
             {
                 return Dispatcher.UIThread.InvokeAsync(returnTaskFunc);

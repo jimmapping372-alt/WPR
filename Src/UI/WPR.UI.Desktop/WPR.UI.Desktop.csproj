@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup Condition=" '$(OS)' != 'Windows_NT' ">
 	<TargetFrameworks>net8.0</TargetFrameworks>
   </PropertyGroup>
@@ -38,12 +38,17 @@
   </ItemGroup>
   <ItemGroup>
 	<PackageReference Include="Avalonia.Desktop" Version="$(AvaloniaVersion)" />
+    <PackageReference Include="Avalonia.ReactiveUI" Version="$(AvaloniaVersion)" />
     <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="$(AvaloniaVersion)" />
     <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
     <PackageReference Include="XamlNameReferenceGenerator" Version="1.3.4" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="$(SolutionDir)\UI\WPR.UI\WPR.UI.csproj" />
+    <ProjectReference Include="$(SolutionDir)\Core\WPR.Common\WPR.Common.csproj" />
+    <ProjectReference Include="$(SolutionDir)\Core\WPR.WindowsCompability\WPR.WindowsCompability.csproj" />
+    <ProjectReference Include="$(SolutionDir)\ThirdParty\Icons.Avalonia\src\Projektanker.Icons.Avalonia.FontAwesome\Projektanker.Icons.Avalonia.FontAwesome.csproj" />
+    <ProjectReference Include="$(SolutionDir)\ThirdParty\Icons.Avalonia\src\Projektanker.Icons.Avalonia\Projektanker.Icons.Avalonia.csproj" />
   </ItemGroup>
   <Target Name="Copy pre-made database" AfterTargets="Build">
 	<ItemGroup>
