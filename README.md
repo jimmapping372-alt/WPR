@@ -1,4 +1,4 @@
-# WPR 0.0.16-alpha :: dev branch
+# WPR 0.0.17-alpha :: dev branch
 ![](Images/logo.png)
 
 WPR is a WP7-8 XNA app runner. This is only my fork of [WPR](https://github.com/8212369/WPR), not the original. 
@@ -20,14 +20,14 @@ CAUTION: _dev_ branch may not build / run normally. This is work-in-progress!
 
 ## What's new in dev?
 - Developed a merger strategy based on compatibility with .NET 8 and Avalonia 11.3.9
-- Merged (almost?) all functions from version 0.0.12 to 0.0.16
+- Merged (almost?) all functions from version 0.0.12
 - Added explicit logging of Avalonia initialization for launching and displaying in the main window
 - Added a small health check window to confirm the creation of a UI thread and window
 - Fixed all critical errors that interfere with the build.:
 - Fixed bugs related to AudioCompabilityConverter
 - Fixed errors related to MessageBox and namespaces
 - Fixed bugs related to ViewLocator and Avalonia
-- Performed a test build using MSBuild, which was successful without errors (warnings only)
+- Performed a test build for Android target using MSBuild, which was successful without errors (warnings only)
 
 
 ## Status
@@ -41,7 +41,7 @@ CAUTION: _dev_ branch may not build / run normally. This is work-in-progress!
 
 ## Tech. details
 - Newest VS 2022 or above must be used to "assemble" (build) this _avalonia_ branch
-- WPR 0.0.16 "avalonia edition" may be incompatible with Windows 10 because of .NET 8... So, fresh Windows 11 OS recommender to run WPR.UI.Desktop (however, some reduced Windows 11 Tiny is good choice even for some very retro-notebooks!).
+- WPR 0.0.17 "avalonia edition" may be incompatible with Windows 10 because of .NET 8... So, fresh Windows 11 OS recommender to run WPR.UI.Desktop (however, some reduced Windows 11 Tiny is good choice even for some very retro-notebooks!).
 
 
 ## TODO

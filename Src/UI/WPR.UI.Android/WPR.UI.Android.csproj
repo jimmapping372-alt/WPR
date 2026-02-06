@@ -7,7 +7,7 @@
     <AvaloniaVersion>11.1-beta1</AvaloniaVersion>
     <ApplicationId>com.MediaExplorer.WPR</ApplicationId>
     <ApplicationVersion>1</ApplicationVersion>
-    <ApplicationDisplayVersion>0.0.12</ApplicationDisplayVersion>
+    <ApplicationDisplayVersion>0.0.17</ApplicationDisplayVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <EmbedAssembliesIntoApk>True</EmbedAssembliesIntoApk>
     <PublishTrimmed>False</PublishTrimmed>

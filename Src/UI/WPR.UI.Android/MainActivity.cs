@@ -19,6 +19,7 @@ using WPR.Common;
 using System.Collections.Generic;
 using Android.Util;
 using Android.Widget;
+using Android.Runtime;
 
 #if !DEBUG
 using Xamarin.Android.AssemblyStore;
@@ -56,6 +57,7 @@ namespace WPR.UI.Android
     }
 
     [Activity(Label = "WPR.Android", Theme = "@style/MyTheme.NoActionBar", Icon = "@drawable/icon", LaunchMode = LaunchMode.SingleInstance, ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize)]
+    [Register("com.wpr.android.MainActivity")]
     public class MainActivity : AvaloniaMainActivity//AvaloniaActivity<App>
     {
         private ActivityResultLauncher ActivitySpawner;
