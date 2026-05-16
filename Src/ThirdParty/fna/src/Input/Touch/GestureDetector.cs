@@ -191,8 +191,22 @@ namespace Microsoft.Xna.Framework.Input.Touch
 				activeFingerId = TouchPanel.NO_FINGER;
 			}
 
-			// We're only interested in the very last finger to leave
-			if (FNAPlatform.GetNumTouchFingers() > 0)
+			/* WPR change: gate on our locally tracked finger count instead of
+			 * SDL_GetNumTouchFingers. The SDL query relies on
+			 * TouchPanel.LastActiveTouchId, which is only assigned in the
+			 * SDL_FINGERDOWN path — for mouse-as-touch (TouchPanel.MouseAsTouch),
+			 * LastActiveTouchId stays 0, and on Windows machines with any touch
+			 * interface enumerated (touchscreen, hybrid 2-in-1, even some
+			 * driver-installed virtual touch services), SDL_GetTouchDevice(0)
+			 * resolves to a real device and SDL_GetNumTouchFingers can return >0
+			 * even though no real finger is down. The early-return then skips
+			 * the entire Tap / Flick / DragComplete block, so games that rely on
+			 * ReadGesture (Angry Birds, Zombies' second scene) never see any
+			 * tap fire. fingerIds reflects what we've actually been tracking
+			 * (Remove was just called above for this fingerId), so it's the
+			 * accurate "is there still a finger down" signal for both paths.
+			 */
+			if (fingerIds.Count > 0)
 			{
 				return;
 			}
@@ -361,15 +375,30 @@ namespace Microsoft.Xna.Framework.Input.Touch
 			if (state == GestureState.HOLDING || state == GestureState.HELD)
 			{
 				// Prevent accidental drags
-				float distanceFromPress = (touchPosition - pressPosition).Length();
+				Vector2 totalDelta = touchPosition - pressPosition;
+				float distanceFromPress = totalDelta.Length();
 				if (distanceFromPress > MOVE_THRESHOLD)
 				{
-					if (hdrag && (Math.Abs(delta.X) > Math.Abs(delta.Y)))
+					/* WPR change: classify H vs V drag using the total drag vector
+					 * (touchPosition − pressPosition), not the single-frame `delta`.
+					 *
+					 * Real WP7 fingers emit large per-event deltas (one
+					 * FINGERMOTION per ~10ms of motion); the original classifier
+					 * worked fine because |delta.X| vs |delta.Y| reflected the
+					 * actual gesture direction. For mouse-as-touch (used by
+					 * desktop runs of WP7 XNA games), motion events fire on every
+					 * pixel — so an individual `delta` is often (1, 0) or (0, 0)
+					 * regardless of which direction the cursor is actually
+					 * tracking. Using the total drag vector gives a stable
+					 * classification that matches user intent. Pac-Man's
+					 * pinch / drag handling depends on this being correct.
+					 */
+					if (hdrag && (Math.Abs(totalDelta.X) > Math.Abs(totalDelta.Y)))
 					{
 						// Horizontal Drag!
 						state = GestureState.DRAGGING_H;
 					}
-					else if (vdrag && (Math.Abs(delta.Y) > Math.Abs(delta.X)))
+					else if (vdrag && (Math.Abs(totalDelta.Y) > Math.Abs(totalDelta.X)))
 					{
 						// Vertical Drag!
 						state = GestureState.DRAGGING_V;

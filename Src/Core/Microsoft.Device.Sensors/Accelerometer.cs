@@ -6,6 +6,23 @@ namespace Microsoft.Devices.Sensors
     {
         private bool _Started = false;
 
+        /// <summary>
+        /// True if the running platform exposes an accelerometer sensor. WPR currently doesn't
+        /// hook hardware sensors on desktop, so we report false — guard code in the user app
+        /// (e.g. <c>if (Accelerometer.IsSupported) ...</c>) skips its sensor wiring path.
+        /// </summary>
+        public static bool IsSupported
+        {
+            get
+            {
+#if __MOBILE__
+                return true;
+#else
+                return false;
+#endif
+            }
+        }
+
         public Accelerometer()
         {
             State = SensorState.Ready;

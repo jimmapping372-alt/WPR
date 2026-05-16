@@ -1,22 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
 
-namespace WPR.WindowsCompability
-{
-    public class ResourceDictionary : Dictionary<string, object?>
-    {
-        public bool Contains(object obj)
-        {
-            return base.ContainsKey((obj as string)!);
-        }
-
-        public object this[object obj]
-        {
-            get => base[(obj as string)!];
-            set => base[(obj as string)!] = value;
-        }
-    }
-}
+// ResourceDictionary was moved into WPR.SilverlightCompability so that
+// WPR.SilverlightCompability.FrameworkElement can expose a Resources property
+// that returns this type without a circular project reference. We keep the
+// forwarder here so any IL (including any pre-existing patched user assemblies
+// that still reference WC's old version) finds the type at runtime.
+[assembly: TypeForwardedTo(typeof(WPR.WindowsCompability.ResourceDictionary))]

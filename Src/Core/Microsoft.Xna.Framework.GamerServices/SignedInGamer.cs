@@ -129,13 +129,41 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             return Task.Run(async () =>
             {
+                string productId = Application.Current.ProductId;
                 List<Achievement> achievements = await AchievementContext.Current!.Achievements!
-                    .Where(x => (x.OwnProductId == Application.Current.ProductId) && (x.Key == achievementKey))
+                    .Where(x => (x.OwnProductId == productId) && (x.Key == achievementKey))
                     .ToListAsync();
 
                 if (achievements.Count > 1)
                 {
                     Log.Warn(LogCategory.GamerServices, $"More then two achievements with key {achievementKey} exists!");
+                }
+
+                if (achievements.Count == 0)
+                {
+                    /* Diagnostic: AwardAchievement fired but we have no matching row
+                     * to flip. Two common reasons:
+                     *   1) The install-time XnaAchievementSeeder couldn't reach
+                     *      TrueAchievements (no internet) or that game has no
+                     *      mapping in Database/TrueAchievements/ProductIdUrl.json,
+                     *      so the catalogue was never seeded.
+                     *   2) The scraper persisted the achievement under its
+                     *      TrueAchievements DISPLAY NAME, but the game is
+                     *      calling AwardAchievement with the INTERNAL KEY (the
+                     *      game's own constant). The display→internal map lives
+                     *      in Database/TrueAchievements/AchievementsNameToKey.json
+                     *      and may be missing an entry for this product.
+                     * Either way: log enough to debug. The user gets no notification
+                     * (there's nothing to look up an icon/name for), but the call
+                     * doesn't crash either.
+                     */
+                    int rowsForProduct = await AchievementContext.Current.Achievements!
+                        .CountAsync(x => x.OwnProductId == productId);
+                    Log.Warn(LogCategory.GamerServices,
+                        $"AwardAchievement: no DB row for product '{productId}' key '{achievementKey}'. " +
+                        $"{rowsForProduct} achievement(s) seeded for this product. " +
+                        "Check that the game's internal key matches the seeded Key column " +
+                        "(see Database/TrueAchievements/AchievementsNameToKey.json).");
                 }
 
                 if (achievements.Count != 0)

@@ -9,14 +9,16 @@ using System.Windows.Input;
 
 namespace WPR.WindowsCompability
 {
-    // projection: System.Windows.Media.Imaging.WriteableBitmap
-    public class WriteableBitmap 
+    // projection: System.Windows.Media.Imaging.WriteableBitmap. In Silverlight
+    // this derives from BitmapSource (-> ImageSource) — we mirror the chain so
+    // Image.Source accepts a WriteableBitmap.
+    public class WriteableBitmap : BitmapSource
     {
-        
+
         Int32 ImgActualWidth;
         Int32 ImgActualHeight;
 
-        
+
         public WriteableBitmap(Int32 ActualWidth, Int32 ActualHeight)
         {
             /*

@@ -1,64 +1,146 @@
 using Avalonia.Media.Imaging;
-using System.IO;
-using System.Threading.Tasks;
-using ReactiveUI;
 using System;
-
-using WPR.Models;
-using WPR.Common;
+using System.IO;
 using System.Reactive;
+using ReactiveUI;
+
+using WPR;
+using WPR.Common;
+using WPR.Models;
 
 namespace WPR.UI.ViewModels
 {
     public class ApplicationItemViewModel : ViewModelBase
     {
-        private Application _App;
+        private readonly Application? _App;
+        private readonly ApplicationPreview? _Preview;
+        private readonly InstallingAppViewModel? _Installing;
+        private readonly string? _XapFilePath;
         private Bitmap? _Icon;
+        private IDisposable? _InstallingProgressSub;
 
         public int IconSize => 90;
         public int Height => 160;
 
         public ReactiveCommand<Unit, Unit> RunAppCommand { get; }
         public ReactiveCommand<Unit, Unit> UninstallAppCommand { get; }
+        public ReactiveCommand<Unit, Unit> InstallAppCommand { get; }
 
-        // Event that will be triggered when app needs to be uninstalled
         public event EventHandler<ApplicationItemViewModel>? UninstallRequested;
+        public event EventHandler<ApplicationItemViewModel>? InstallRequested;
 
         public ApplicationItemViewModel(Application app)
         {
             _App = app;
-            RunAppCommand = ReactiveCommand.Create(() => RunApp());
-            UninstallAppCommand = ReactiveCommand.Create(() => UninstallApp());
+            RunAppCommand = ReactiveCommand.Create(RunApp);
+            UninstallAppCommand = ReactiveCommand.Create(UninstallApp);
+            InstallAppCommand = ReactiveCommand.Create(() => { });
         }
 
-        internal Application App => _App;
-        
-        // Property to expose the application model for easier access
-        public Application Model => _App;
+        public ApplicationItemViewModel(string xapFilePath, ApplicationPreview preview)
+        {
+            _XapFilePath = xapFilePath;
+            _Preview = preview;
+            RunAppCommand = ReactiveCommand.Create(() => { });
+            UninstallAppCommand = ReactiveCommand.Create(() => { });
+            InstallAppCommand = ReactiveCommand.Create(InstallApp);
+        }
 
-        public string? Name => _App.Name;
-        public string? Tooltip
+        /// <summary>
+        /// Construct a library list entry representing an in-flight install.
+        /// Replaces the discovered "available" entry for the same product while
+        /// the install is running. The entry renders with a progress bar and
+        /// (via the listing view-model's selection handler) navigates to the
+        /// install detail pane on click.
+        /// </summary>
+        public ApplicationItemViewModel(InstallingAppViewModel installing)
+        {
+            _Installing = installing;
+            RunAppCommand = ReactiveCommand.Create(() => { });
+            UninstallAppCommand = ReactiveCommand.Create(() => { });
+            InstallAppCommand = ReactiveCommand.Create(() => { });
+
+            // Re-raise PropertyChanged for our Progress when the installer ticks.
+            _InstallingProgressSub = installing.WhenAnyValue(i => i.Progress)
+                .Subscribe(_ => this.RaisePropertyChanged(nameof(Progress)));
+        }
+
+        internal Application? App => _App;
+
+        public Application? Model => _App;
+        public ApplicationPreview? Preview => _Preview;
+        public InstallingAppViewModel? Installing => _Installing;
+        public string? XapFilePath => _XapFilePath;
+
+        public bool IsInstalled => _App != null;
+        public bool IsAvailable => _App == null && _Installing == null;
+        public bool IsInstalling => _Installing != null;
+        public int Progress => _Installing?.Progress ?? 0;
+
+        public string? Name => _App?.Name ?? _Preview?.Name ?? _Installing?.Name;
+        public string? Author => _App?.Author ?? _Preview?.Author ?? _Installing?.Author;
+        public string? Publisher => _App?.Publisher ?? _Preview?.Publisher ?? _Installing?.Publisher;
+        public string? Description => _App?.Description ?? _Preview?.Description ?? _Installing?.Description;
+        public string? Version => _App?.Version ?? _Preview?.Version ?? _Installing?.Version;
+        public string? ProductId => _App?.ProductId ?? _Preview?.ProductId ?? _Installing?.ProductId;
+        public ApplicationType? ApplicationType => _App?.ApplicationType ?? _Preview?.ApplicationType ?? _Installing?.ApplicationType;
+
+        /// <summary>
+        /// Single uppercase eyebrow label for the detail hero. Prefers the
+        /// runtime type name ("SILVERLIGHT" / "XNA" / "MODERNNATIVE") when it's
+        /// resolvable from either the installed Application or the preview's
+        /// manifest, and falls back to "AVAILABLE TO INSTALL" only when there
+        /// is genuinely no type information (e.g. corrupt manifest). Lets the
+        /// XAML bind one TextBlock instead of juggling visibility conditions.
+        /// </summary>
+        public string TypeLabel
         {
             get
             {
-                return (_App.Description.Length == 0) ? _App.Name : $"{_App.Name}\n\n{_App.Description}";
+                if (IsInstalling) return "INSTALLING";
+                var t = ApplicationType;
+                if (t.HasValue) return t.Value.ToString().ToUpperInvariant();
+                return IsInstalled ? "" : "AVAILABLE TO INSTALL";
+            }
+        }
+        public DateTime? InstalledTime => _App?.InstalledTime;
+
+        public string Tooltip
+        {
+            get
+            {
+                string name = Name ?? "";
+                string desc = Description ?? "";
+                if (!IsInstalled) name += "  (available)";
+                return desc.Length == 0 ? name : $"{name}\n\n{desc}";
             }
         }
 
-        public Bitmap Icon
+        public Bitmap? Icon
         {
             get
             {
-                _Icon = default;
-
                 if (_Icon == null)
                 {
                     try
                     {
-                        var iconpath = Configuration.Current!.DataPath(_App.IconPath);
-                        var fs = new FileStream(iconpath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                        _Icon = Bitmap.DecodeToWidth(fs,
-                            IconSize);
+                        if (_App != null)
+                        {
+                            string iconpath = Configuration.Current!.DataPath(_App.IconPath);
+                            using FileStream fs = new FileStream(iconpath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                            _Icon = Bitmap.DecodeToWidth(fs, IconSize);
+                        }
+                        else if (_Preview?.IconBytes != null)
+                        {
+                            using MemoryStream ms = new MemoryStream(_Preview.IconBytes);
+                            _Icon = Bitmap.DecodeToWidth(ms, IconSize);
+                        }
+                        else if (_Installing?.Icon != null)
+                        {
+                            // The InstallingAppViewModel already decoded an icon
+                            // from preview bytes; reuse it instead of re-decoding.
+                            _Icon = _Installing.Icon;
+                        }
                     }
                     catch { }
                 }
@@ -69,14 +151,17 @@ namespace WPR.UI.ViewModels
 
         private void RunApp()
         {
-            // Logic to run the application
-            WPR.UI.ApplicationLaunchRequest.Ask(_App);
+            if (_App != null) WPR.UI.ApplicationLaunchRequest.Ask(_App);
         }
 
         private void UninstallApp()
         {
-            // Trigger the uninstall event so the parent view model can handle it
             UninstallRequested?.Invoke(this, this);
+        }
+
+        private void InstallApp()
+        {
+            InstallRequested?.Invoke(this, this);
         }
     }
 }

@@ -19,7 +19,7 @@ namespace WPR.UI.Properties {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "17.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "18.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     public class Resources {
@@ -160,6 +160,15 @@ namespace WPR.UI.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Clear game library folder.
+        /// </summary>
+        public static string ClearGameLibraryPath {
+            get {
+                return ResourceManager.GetString("ClearGameLibraryPath", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Data storage.
         /// </summary>
         public static string DataStoragePath {
@@ -176,6 +185,42 @@ namespace WPR.UI.Properties {
                 return ResourceManager.GetString("EnterYourGamerTag", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Gamer profile.
+        /// </summary>
+        public static string GamerProfile {
+            get {
+                return ResourceManager.GetString("GamerProfile", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Highlight color.
+        /// </summary>
+        public static string HighlightColor {
+            get {
+                return ResourceManager.GetString("HighlightColor", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to WP7 system accent — affects Panorama titles, accent text, and toolkit-themed buttons inside games.
+        /// </summary>
+        public static string HighlightColorHint {
+            get {
+                return ResourceManager.GetString("HighlightColorHint", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Custom….
+        /// </summary>
+        public static string HighlightColorPickerCustom {
+            get {
+                return ResourceManager.GetString("HighlightColorPickerCustom", resourceCulture);
+            }
+        }
         
         /// <summary>
         ///   Looks up a localized string similar to Application encountered an unexpected error while executing. Please check the log for more detailed info!.
@@ -183,6 +228,24 @@ namespace WPR.UI.Properties {
         public static string ExceptionRunApp {
             get {
                 return ResourceManager.GetString("ExceptionRunApp", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Game library folder.
+        /// </summary>
+        public static string GameLibraryPath {
+            get {
+                return ResourceManager.GetString("GameLibraryPath", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Folder to scan for installable .xap files (optional).
+        /// </summary>
+        public static string GameLibraryPathHint {
+            get {
+                return ResourceManager.GetString("GameLibraryPathHint", resourceCulture);
             }
         }
         

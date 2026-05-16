@@ -36,6 +36,10 @@ namespace WPR.UI.Views
                             case 2:
                                 _Pages[2] = new AboutPage();
                                 break;
+
+                            case 3:
+                                _Pages[3] = new AchievementsPage();
+                                break;
                         }
                     }
 

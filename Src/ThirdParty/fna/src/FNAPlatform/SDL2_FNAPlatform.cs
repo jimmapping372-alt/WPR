@@ -95,6 +95,19 @@ namespace Microsoft.Xna.Framework
 					);
 				}
 
+				/* WPR: pass clicks through when the window is being focused.
+				 * Default Windows / SDL behaviour eats the first click after
+				 * a window loses focus (taskbar interaction, alt-tab, etc.) —
+				 * the user has to click twice for the app to see one press.
+				 * For WP7 games translating mouse to touch input via
+				 * TouchPanel.MouseAsTouch, that one missed click is the
+				 * common "I have to double-click to register a tap" symptom.
+				 */
+				SDL.SDL_SetHint(
+					SDL.SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH,
+					"1"
+				);
+
 				/* Windows has terrible event pumping and doesn't give us
 				 * WM_PAINT events correctly. So we get to do this!
 				 * -flibit
@@ -940,6 +953,22 @@ namespace Microsoft.Xna.Framework
 				// Mouse Input
 				else if (evt.type == SDL.SDL_EventType.SDL_MOUSEBUTTONDOWN)
 				{
+					/* WPR change: SDL synthesises mouse-button events from real
+					 * finger taps (touchscreen / precision-touchpad / 2-in-1
+					 * convertibles tag the synth with which=SDL_TOUCH_MOUSEID).
+					 * Without this filter, a single tap on a touch-capable
+					 * laptop fires both the real SDL_FINGERDOWN handler below
+					 * AND this mouse handler — meaning two GestureDetector.OnPressed
+					 * calls land per tap, the second one promotes state to
+					 * PINCHING (because activeFingerId is already set), and
+					 * the eventual release path emits PinchComplete instead of
+					 * Tap. Drop the synth so only the real source fires.
+					 */
+					if (evt.button.which == SDL.SDL_TOUCH_MOUSEID)
+					{
+						continue;
+					}
+
 					Mouse.INTERNAL_onClicked(evt.button.button - 1);
 
 					if (TouchPanel.MouseAsTouch)
@@ -956,17 +985,38 @@ namespace Microsoft.Xna.Framework
 				}
 				else if (evt.type == SDL.SDL_EventType.SDL_MOUSEMOTION)
 				{
+					// Synthesised-from-touch dedup — see SDL_MOUSEBUTTONDOWN above.
+					if (evt.motion.which == SDL.SDL_TOUCH_MOUSEID)
+					{
+						continue;
+					}
+
 					if (TouchPanel.MouseAsTouch)
 					{
+						// motion.x/y is the *current* position; motion.xrel/yrel is the
+						// per-event delta. INTERNAL_onTouchEvent's third/fourth args are
+						// the delta (it multiplies by DisplayWidth/Height and feeds it
+						// into GestureDetector.OnMoved as the per-event movement), so we
+						// must pass xrel/yrel here. Passing motion.x/y mistakenly fed the
+						// current position as "delta", causing OnMoved to think every
+						// move was a huge X+Y vector — the H-vs-V drag classifier then
+						// dominated based on whichever axis the cursor's absolute
+						// coordinate was larger on, breaking swipe-direction detection.
 						TouchPanel.INTERNAL_onTouchEvent(1, TouchLocationState.Moved,
-							(float)evt.button.x / Mouse.INTERNAL_WindowWidth,
-							(float)evt.button.y / Mouse.INTERNAL_WindowHeight,
 							(float)evt.motion.x / Mouse.INTERNAL_WindowWidth,
-							(float)evt.motion.y / Mouse.INTERNAL_WindowHeight);
+							(float)evt.motion.y / Mouse.INTERNAL_WindowHeight,
+							(float)evt.motion.xrel / Mouse.INTERNAL_WindowWidth,
+							(float)evt.motion.yrel / Mouse.INTERNAL_WindowHeight);
 					}
 				}
 				else if (evt.type == SDL.SDL_EventType.SDL_MOUSEBUTTONUP)
 				{
+					// Synthesised-from-touch dedup — see SDL_MOUSEBUTTONDOWN above.
+					if (evt.button.which == SDL.SDL_TOUCH_MOUSEID)
+					{
+						continue;
+					}
+
 					if (TouchPanel.MouseAsTouch)
 					{
 						TouchPanel.INTERNAL_onTouchEvent(1, TouchLocationState.Released,
@@ -980,6 +1030,61 @@ namespace Microsoft.Xna.Framework
 				{
 					// 120 units per notch. Because reasons.
 					Mouse.INTERNAL_MouseWheel += evt.wheel.y * 120;
+
+					/* WPR: synthesise a Pinch GestureSample per wheel notch when
+					 * mouse-as-touch is in effect and the title has enabled
+					 * Pinch. Two virtual fingers are placed symmetrically
+					 * around the cursor; wheel-up spreads them apart (pinch
+					 * out / zoom in), wheel-down brings them together. We emit
+					 * one Pinch sample per notch and a PinchComplete on every
+					 * notch boundary so titles that drive zoom off Pinch+
+					 * PinchComplete pairs (rather than continuous Pinch
+					 * streams) still progress. The visible-pinch radius
+					 * (60 pixels) and per-tick spread (20 pixels) are chosen
+					 * to roughly match a slow two-finger gesture on a phone
+					 * — feels neither sluggish nor twitchy with a wheel.
+					 */
+					if (TouchPanel.MouseAsTouch &&
+						(TouchPanel.EnabledGestures & GestureType.Pinch) != 0 &&
+						evt.wheel.y != 0)
+					{
+						SDL.SDL_GetMouseState(out int cx, out int cy);
+						int ww = Mouse.INTERNAL_WindowWidth;
+						int wh = Mouse.INTERNAL_WindowHeight;
+						float dispScaleX = (ww > 0) ? (float)TouchPanel.DisplayWidth / ww : 1f;
+						float dispScaleY = (wh > 0) ? (float)TouchPanel.DisplayHeight / wh : 1f;
+						float anchorX = cx * dispScaleX;
+						float anchorY = cy * dispScaleY;
+
+						// Place the two virtual fingers 60 px (display-space) on
+						// either side of the cursor.
+						const float kHalfSpread = 60f;
+						Vector2 finger1 = new Vector2(anchorX - kHalfSpread, anchorY);
+						Vector2 finger2 = new Vector2(anchorX + kHalfSpread, anchorY);
+
+						// Per-notch movement: wheel-up (+y) spreads outward,
+						// wheel-down (-y) inward. 20 px per notch.
+						const float kSpreadPerNotch = 20f;
+						float move = Math.Sign(evt.wheel.y) * kSpreadPerNotch;
+						Vector2 delta1 = new Vector2(-move, 0);
+						Vector2 delta2 = new Vector2(move, 0);
+
+						TimeSpan ts = TimeSpan.FromTicks(Environment.TickCount);
+						TouchPanel.EnqueueGesture(new GestureSample(
+							GestureType.Pinch,
+							ts,
+							finger1, finger2,
+							delta1, delta2));
+
+						if ((TouchPanel.EnabledGestures & GestureType.PinchComplete) != 0)
+						{
+							TouchPanel.EnqueueGesture(new GestureSample(
+								GestureType.PinchComplete,
+								ts,
+								Vector2.Zero, Vector2.Zero,
+								Vector2.Zero, Vector2.Zero));
+						}
+					}
 				}
 
 				// Touch Input
@@ -2310,7 +2415,17 @@ namespace Microsoft.Xna.Framework
 			 */
 			if (TouchPanel.MouseAsTouch)
 			{
-				return new TouchPanelCapabilities(true, 1);
+				/* WPR: report MaximumTouchCount=2 for mouse-as-touch. Some titles
+				 * gate two-finger features (pinch in particular) on
+				 * GetCapabilities().MaximumTouchCount >= 2 and silently disable
+				 * them when only one is reported — Pac-Man's pinch-to-zoom is
+				 * the surfaced example. We synthesise Pinch from the mouse
+				 * wheel (see SDL_MOUSEWHEEL handler), so claiming 2 is honest
+				 * about the gestures we can actually produce. Still less than
+				 * the 4 a real WP device reports, because we genuinely cannot
+				 * simulate 3-or-more-finger gestures from one mouse.
+				 */
+				return new TouchPanelCapabilities(true, 2);
 			}
 
 			bool touchDeviceExists = (SDL.SDL_GetNumTouchDevices() > 0);
@@ -2325,10 +2440,28 @@ namespace Microsoft.Xna.Framework
 			if (TouchPanel.MouseAsTouch)
 			{
 				uint flags = SDL.SDL_GetMouseState(out int x, out int y);
+				bool nowPressed = ((ButtonState)(flags & SDL.SDL_BUTTON_LMASK) == ButtonState.Pressed);
 
-				if ((ButtonState)(flags & SDL.SDL_BUTTON_LMASK) == ButtonState.Pressed)
+				if (nowPressed)
 				{
-					TouchPanel.SetFinger(0, 1, new Vector2(x, y));
+					/* SetFinger expects DisplayWidth/Height-relative coords (the real-finger
+					 * path below scales by DisplayWidth/Height). SDL_GetMouseState returns
+					 * raw window pixels — without this scale, games whose SDL window has
+					 * been resized away from BackBufferWidth/Height (which is what
+					 * DisplayWidth/Height tracks) see clicks at wrong logical positions and
+					 * their hit-rects miss. WP7 games at 480x800 in a maximised desktop
+					 * window are the common case where this matters.
+					 */
+					int ww = Mouse.INTERNAL_WindowWidth;
+					int wh = Mouse.INTERNAL_WindowHeight;
+					float fx = (ww > 0)
+						? (float)x * TouchPanel.DisplayWidth / ww
+						: x;
+					float fy = (wh > 0)
+						? (float)y * TouchPanel.DisplayHeight / wh
+						: y;
+
+					TouchPanel.SetFinger(0, 1, new Vector2(fx, fy));
 				}
 				else
 				{

@@ -235,6 +235,114 @@ namespace WPR.UI
 #endif
         }
 
+        /// <summary>
+        /// Shows an error dialog whose body is a read-only, selectable, multi-line TextBox so
+        /// the user can copy the text. A "Copy" button copies the full body to the clipboard.
+        /// Resizable. Falls back to <see cref="GetMessageDialogResult"/> on Android.
+        /// </summary>
+        public static Task ShowSelectableErrorAsync(string title, string body)
+        {
+#if __ANDROID__
+            return GetMessageDialogResult(
+                title: title,
+                text: body,
+                buttons: MessageBox.Avalonia.Enums.ButtonEnum.Ok,
+                icon: MessageBox.Avalonia.Enums.Icon.Error);
+#else
+            Func<Task> returnTaskFunc = () =>
+            {
+                var tcs = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                var w = new Window
+                {
+                    Title = title,
+                    Width = 720,
+                    Height = 480,
+                    MinWidth = 360,
+                    MinHeight = 240,
+                    CanResize = true,
+                    WindowStartupLocation = WindowStartupLocation.CenterScreen,
+                };
+
+                var grid = new Grid { Margin = new Thickness(16) };
+                grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+                grid.RowDefinitions.Add(new RowDefinition(new GridLength(1, GridUnitType.Star)));
+                grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+
+                var header = new TextBlock
+                {
+                    Text = title,
+                    FontWeight = FontWeight.Bold,
+                    FontSize = 16,
+                    Margin = new Thickness(0, 0, 0, 10),
+                };
+                Grid.SetRow(header, 0);
+                grid.Children.Add(header);
+
+                var errorBox = new TextBox
+                {
+                    Text = body,
+                    IsReadOnly = true,
+                    AcceptsReturn = true,
+                    TextWrapping = TextWrapping.Wrap,
+                    VerticalContentAlignment = VerticalAlignment.Top,
+                    FontFamily = new FontFamily("Consolas, Courier New, monospace"),
+                    FontSize = 12,
+                    Margin = new Thickness(0, 0, 0, 10),
+                };
+                ScrollViewer.SetHorizontalScrollBarVisibility(errorBox, Avalonia.Controls.Primitives.ScrollBarVisibility.Auto);
+                ScrollViewer.SetVerticalScrollBarVisibility(errorBox, Avalonia.Controls.Primitives.ScrollBarVisibility.Auto);
+                Grid.SetRow(errorBox, 1);
+                grid.Children.Add(errorBox);
+
+                var buttonsPanel = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+                    Spacing = 8,
+                };
+                Grid.SetRow(buttonsPanel, 2);
+
+                var copyBtn = new Button { Content = "Copy", MinWidth = 80 };
+                copyBtn.Click += async (_, __) =>
+                {
+                    try
+                    {
+                        var clipboard = TopLevel.GetTopLevel(w)?.Clipboard;
+                        if (clipboard != null) await clipboard.SetTextAsync(body);
+                        copyBtn.Content = "Copied";
+                    }
+                    catch { /* clipboard unavailable; surface nothing */ }
+                };
+                buttonsPanel.Children.Add(copyBtn);
+
+                var okBtn = new Button { Content = "OK", MinWidth = 80, IsDefault = true };
+                okBtn.Click += (_, __) => { tcs.TrySetResult(null); w.Close(); };
+                buttonsPanel.Children.Add(okBtn);
+
+                grid.Children.Add(buttonsPanel);
+                w.Content = grid;
+                w.Closed += (_, __) => tcs.TrySetResult(null);
+
+                if (MainWindow != null)
+                {
+                    _ = w.ShowDialog(MainWindow);
+                }
+                else
+                {
+                    w.Show();
+                }
+
+                return tcs.Task;
+            };
+
+            if (Dispatcher.UIThread.CheckAccess())
+                return returnTaskFunc();
+
+            return Dispatcher.UIThread.InvokeAsync(returnTaskFunc);
+#endif
+        }
+
         public static Task<string> GetInputResult(string title, string description, string defaultText, bool isModal = true, bool dispatchMain = false)
         {
 #if __ANDROID__

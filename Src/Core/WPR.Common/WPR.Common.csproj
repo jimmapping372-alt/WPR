@@ -9,7 +9,11 @@
   </PropertyGroup>
   <PropertyGroup>
     <CheckEolWorkloads>false</CheckEolWorkloads>
-    <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net8.0-android'">26</SupportedOSPlatformVersion>
+    <!-- 21 (Android 5.0) matches the TargetPlatformVersion that the
+         installed .NET 10 Android workload (android 36.1.43/10.0.100)
+         assigns to a bare net8.0-android TFM. Setting it any higher
+         triggers NETSDK1135 (SOSV > TPV). -->
+    <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net8.0-android'">21.0</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>

@@ -75,6 +75,20 @@ namespace Microsoft.Xna.Framework.Input.Touch
 				{
 					TouchDeviceExists = false;
 				}
+				else if (value)
+				{
+					/* WPR change: eagerly mark a touch device as present whenever
+					 * MouseAsTouch is enabled. The original FNA behaviour only flipped
+					 * TouchDeviceExists on the first SDL_MOUSEBUTTONDOWN, which left
+					 * GetCapabilities().IsConnected reporting false until the user
+					 * physically clicked. WP7 games commonly probe IsConnected during
+					 * their Game constructor / LoadContent and cache the result; if
+					 * they see "false" once they may disable touch input handling for
+					 * the entire session, leaving the user unable to click anything.
+					 * Returning IsConnected=true the moment MouseAsTouch goes true
+					 * matches what the host clearly intends when it sets that flag. */
+					TouchDeviceExists = true;
+				}
 
 				_MouseAsTouch = value;
 			}
@@ -126,7 +140,6 @@ namespace Microsoft.Xna.Framework.Input.Touch
 			{
 				throw new InvalidOperationException();
 			}
-
 			return gestures.Dequeue();
 		}
 
@@ -163,9 +176,20 @@ namespace Microsoft.Xna.Framework.Input.Touch
 
 				case TouchLocationState.Moved:
 
+					/* WPR change: don't Math.Round here. For mouse-as-touch, the
+					 * caller passes (motion.xrel / WindowWidth, motion.yrel /
+					 * WindowHeight) — a 1-pixel cursor move in a wide host window
+					 * comes out as e.g. dx ≈ 0.0008; multiplied by a 480-wide phone
+					 * display that's 0.375 pixels, which Math.Round flattens to 0.
+					 * Slow-moving mouse drags then deliver delta=(0,0) to every
+					 * gesture sample, breaking games that integrate deltas
+					 * (Pac-Man drag/pinch in particular). Use the float value
+					 * directly so sub-pixel deltas survive — GestureSample's
+					 * fields are floats so consumers tolerate fractional values.
+					 */
 					Vector2 delta = new Vector2(
-						(float) Math.Round(dx * DisplayWidth),
-						(float) Math.Round(dy * DisplayHeight)
+						(float) (dx * DisplayWidth),
+						(float) (dy * DisplayHeight)
 					);
 
 					GestureDetector.OnMoved(fingerId, touchPos, delta);

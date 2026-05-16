@@ -730,8 +730,18 @@ namespace Microsoft.Xna.Framework.Graphics
 			);
 		}
 
+		// Counts the first few Clear() calls so the WPR debug log can show whether the game
+		// even reaches the device-clear stage of its Draw(). Static so it spans all device
+		// instances and doesn't require allocating per-game state.
+		private static int _wprClearTraceCount;
+
 		public void Clear(ClearOptions options, Vector4 color, float depth, int stencil)
 		{
+			if (_wprClearTraceCount < 3)
+			{
+				_wprClearTraceCount++;
+				Trace.WriteLine($"[wpr-trace] GraphicsDevice.Clear #{_wprClearTraceCount}: options={options} color=({color.X:F2},{color.Y:F2},{color.Z:F2},{color.W:F2})");
+			}
 			DepthFormat dsFormat;
 			if (renderTargetCount == 0)
 			{

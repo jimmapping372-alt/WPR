@@ -38,6 +38,11 @@ namespace WPR.UI.Desktop
 
             NativeUI.Initialize();
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+
+            // Backstop: FNA spawns non-background threads (audio, render) for any game we launched.
+            // Even after every WPR window closes, those threads keep the CLR alive. Force a clean
+            // process exit so closing the WPR window actually shuts WPR down.
+            Environment.Exit(0);
         }
 
         // Avalonia configuration, don't remove; also used by visual designer.

@@ -8,6 +8,7 @@
         AppAudioConverter,
         AppPatcher,
         AppList,
+        AppLaunch,
         Android,
         Startup,
         Registration

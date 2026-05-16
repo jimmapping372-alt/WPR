@@ -2,13 +2,24 @@
 
 using System;
 
+using SlImageSource = WPR.SilverlightCompability.ImageSource;
 
 namespace WPR.WindowsCompability
 {
-    // projection: System.Windows.Media.Imaging.BitmapSource
-    public class BitmapSource 
+    // projection: System.Windows.Media.Imaging.BitmapSource. Inherits from
+    // WPR.SilverlightCompability.ImageSource so instances can be assigned to
+    // Image.Source (which is typed ImageSource). Mirrors Silverlight's chain:
+    //   ImageSource <- BitmapSource <- BitmapImage / WriteableBitmap.
+    public class BitmapSource : SlImageSource
     {
         public BitmapSource()
+        {
+        }
+
+        // Lets BitmapImage(Uri) seed the inherited Path field through the public
+        // ImageSource(string) constructor, since Path itself is internal to the
+        // SilverlightCompability assembly.
+        protected BitmapSource(string path) : base(path)
         {
         }
 

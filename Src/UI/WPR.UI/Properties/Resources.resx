@@ -171,8 +171,29 @@
   <data name="DataStoragePath" xml:space="preserve">
     <value>Data storage</value>
   </data>
+  <data name="GameLibraryPath" xml:space="preserve">
+    <value>Game library folder</value>
+  </data>
+  <data name="GameLibraryPathHint" xml:space="preserve">
+    <value>Folder to scan for installable .xap files (optional)</value>
+  </data>
+  <data name="ClearGameLibraryPath" xml:space="preserve">
+    <value>Clear game library folder</value>
+  </data>
   <data name="EnterYourGamerTag" xml:space="preserve">
     <value>Enter your GamerTag...</value>
+  </data>
+  <data name="GamerProfile" xml:space="preserve">
+    <value>Gamer profile</value>
+  </data>
+  <data name="HighlightColor" xml:space="preserve">
+    <value>Highlight color</value>
+  </data>
+  <data name="HighlightColorHint" xml:space="preserve">
+    <value>WP7 system accent — affects Panorama titles, accent text, and toolkit-themed buttons inside games.</value>
+  </data>
+  <data name="HighlightColorPickerCustom" xml:space="preserve">
+    <value>Custom…</value>
   </data>
   <data name="ExceptionRunApp" xml:space="preserve">
     <value>Application encountered an unexpected error while executing. Please check the log for more detailed info!</value>

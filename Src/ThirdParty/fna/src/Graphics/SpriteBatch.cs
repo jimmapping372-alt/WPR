@@ -10,6 +10,7 @@
 #region Using Statements
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 #endregion
@@ -304,6 +305,12 @@ namespace Microsoft.Xna.Framework.Graphics
 
 		#region Public End Method
 
+		// Counts the first few SpriteBatch.End() calls so the WPR debug log can show whether
+		// the game is actually submitting batches of sprites. A black screen with zero
+		// SpriteBatch.End logs means the game's Draw doesn't try to render anything.
+		private static int _wprEndTraceCount;
+		private int _wprBatchItemSnapshot;
+
 		public void End()
 		{
 			if (!beginCalled)
@@ -316,11 +323,19 @@ namespace Microsoft.Xna.Framework.Graphics
 			}
 			beginCalled = false;
 
+			_wprBatchItemSnapshot = numSprites;
+
 			if (sortMode != SpriteSortMode.Immediate)
 			{
 				FlushBatch();
 			}
 			customEffect = null;
+
+			if (_wprEndTraceCount < 5)
+			{
+				_wprEndTraceCount++;
+				Trace.WriteLine($"[wpr-trace] SpriteBatch.End #{_wprEndTraceCount}: sprites={_wprBatchItemSnapshot} sortMode={sortMode}");
+			}
 		}
 
 		#endregion

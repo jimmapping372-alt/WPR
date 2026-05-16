@@ -16,6 +16,14 @@ namespace WPR.UI.Views
         {
             InitializeComponent();
 
+            // Ask any running game to exit when the main window closes so its threads
+            // (FNA render/audio loops are non-background) don't keep the process alive.
+            Closing += (_, _) =>
+            {
+                WPR.ApplicationLaunch.RequestExit();
+                SilverlightLauncher.RequestExit();
+            };
+
 //RnD
 #if (true)//!__MOBILE__
 #if !__MOBILE__
@@ -54,7 +62,14 @@ namespace WPR.UI.Views
 
                 try
                 {
-                    await ApplicationLaunch.Start(args.Target, default);
+                    if (args.Target.ApplicationType == ApplicationType.Silverlight)
+                    {
+                        await SilverlightLauncher.LaunchAsync(args.Target);
+                    }
+                    else
+                    {
+                        await ApplicationLaunch.Start(args.Target, default);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -74,10 +89,14 @@ namespace WPR.UI.Views
 
                 if (!runOk)
                 {
-                    await MessageBoxUtils.GetMessageDialogResult(
-                        title: Properties.Resources.AppRunError + " ("+ ErrorMessage+")",
-                        text: Properties.Resources.ExceptionRunApp + ". StackTrace: "+StackTrace,
-                        icon: MessageBox.Avalonia.Enums.Icon.Error);
+                    string body =
+                        Properties.Resources.ExceptionRunApp + Environment.NewLine + Environment.NewLine +
+                        "Message:" + Environment.NewLine + ErrorMessage + Environment.NewLine + Environment.NewLine +
+                        "Stack trace:" + Environment.NewLine + StackTrace;
+
+                    await MessageBoxUtils.ShowSelectableErrorAsync(
+                        title: Properties.Resources.AppRunError,
+                        body: body);
                 }
             };
 #endif
