@@ -48,6 +48,28 @@ namespace WPR.SilverlightCompability
             DependencyProperty.Register(nameof(Tag), typeof(object), typeof(FrameworkElement),
                 new PropertyMetadata((object?)null));
 
+        /// <summary>
+        /// Canonical Background DP shared across Panel / ContentControl / Border /
+        /// Control. Real Silverlight declares Background separately on each of
+        /// those types but games freely cast between them and rely on a single
+        /// stored value — Minesweeper's <c>LoadPanorama</c> sets the panorama
+        /// background via the <c>Control::set_Background</c> IL inherited from
+        /// Silverlight's pre-patch Panorama base, while our renderer reads it
+        /// back via <c>Panel.Background</c>. Storing under one DP keeps the
+        /// two views in sync; the per-class <c>BackgroundProperty</c> fields
+        /// are kept as aliases to this one so existing IL field references
+        /// (<c>ldsfld Panel::BackgroundProperty</c>, etc.) still resolve.
+        /// </summary>
+        public static readonly DependencyProperty BackgroundProperty =
+            DependencyProperty.Register(nameof(Background), typeof(Brush), typeof(FrameworkElement),
+                new PropertyMetadata((object?)null));
+
+        public Brush? Background
+        {
+            get => (Brush?)GetValue(BackgroundProperty);
+            set => SetValue(BackgroundProperty, value);
+        }
+
         public double Width
         {
             get => (double)GetValue(WidthProperty)!;

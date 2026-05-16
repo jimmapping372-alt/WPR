@@ -252,6 +252,7 @@ namespace WPR.SilverlightCompability
 
             var pos = ToLogical(e.GetPosition(this));
             double dx = pos.X - _interaction.LastPos.X;
+            double dy = pos.Y - _interaction.LastPos.Y;
 
             // Total horizontal travel from the start determines "is this a drag?".
             double totalDx = pos.X - _interaction.StartPos.X;
@@ -263,9 +264,12 @@ namespace WPR.SilverlightCompability
                 _interaction.IsDragging = true;
             }
 
-            // If the drag is horizontal-dominant and the hit chain contains a
-            // Panorama, treat the drag as panorama paging — track the offset so
-            // the renderer can shift the strip live.
+            // Drag dispatch:
+            //   - Horizontal-dominant → panorama paging (advance/retreat items)
+            //   - Vertical-dominant → scroll the current PanoramaItem's content
+            //     (WP7 toolkit wraps panorama-item content in a ScrollViewer via
+            //     its default template; we don't apply templates so the content
+            //     overflows visually — this gives users a way to reach it).
             if (_interaction.IsDragging && Math.Abs(totalDx) > Math.Abs(totalDy))
             {
                 var panorama = FindAncestorByTypeName(_interaction.HitChain, "Microsoft.Phone.Controls.Panorama");
@@ -274,6 +278,20 @@ namespace WPR.SilverlightCompability
                     var state = PanoramaStateTable.GetOrCreate(panorama);
                     state.IsDragging = true;
                     state.DragOffset = totalDx;
+                    InvalidateVisual();
+                }
+            }
+            else if (_interaction.IsDragging && Math.Abs(totalDy) > Math.Abs(totalDx))
+            {
+                var panoramaItem = FindAncestorByTypeName(_interaction.HitChain, "Microsoft.Phone.Controls.PanoramaItem");
+                if (panoramaItem != null)
+                {
+                    var scroll = PanoramaItemScrollTable.GetOrCreate(panoramaItem);
+                    // Drag-down (positive dy) reveals content above the current
+                    // viewport, so subtract dy from ScrollY. Renderer clamps to
+                    // a sensible range once it knows the content height.
+                    scroll.ScrollY -= dy;
+                    if (scroll.ScrollY < 0) scroll.ScrollY = 0;
                     InvalidateVisual();
                 }
             }

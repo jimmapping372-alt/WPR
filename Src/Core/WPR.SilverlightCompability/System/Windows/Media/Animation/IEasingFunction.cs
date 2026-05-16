@@ -1,7 +1,3 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-
 namespace WPR.SilverlightCompability
 {
     /// <summary>Marker for easing functions referenced in XAML (BackEase, CubicEase, etc.).

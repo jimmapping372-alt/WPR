@@ -12,15 +12,14 @@ namespace WPR.SilverlightCompability
     [ContentProperty(nameof(Children))]
     public class Panel : FrameworkElement
     {
-        public static readonly DependencyProperty BackgroundProperty =
-            DependencyProperty.Register(nameof(Background), typeof(Brush), typeof(Panel),
-                new PropertyMetadata((object?)null));
+        // Alias of the canonical FrameworkElement.BackgroundProperty so user
+        // IL that loads this static field (ldsfld Panel::BackgroundProperty)
+        // still resolves, but DP-storage is shared with every other place
+        // that reads/writes Background — see FrameworkElement for the rationale.
+        public static readonly DependencyProperty BackgroundProperty = FrameworkElement.BackgroundProperty;
 
-        public Brush? Background
-        {
-            get => (Brush?)GetValue(BackgroundProperty);
-            set => SetValue(BackgroundProperty, value);
-        }
+        // The CLR `Background` property is inherited from FrameworkElement —
+        // no shadow declaration here; readers and writers all use the same DP.
 
         public UIElementCollection Children { get; }
 

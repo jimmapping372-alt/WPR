@@ -7,9 +7,14 @@ namespace WPR.SilverlightCompability
     /// (template, focus visual) isn't relevant on WPR.</summary>
     public class Control : FrameworkElement
     {
-        public static readonly DependencyProperty BackgroundProperty =
-            DependencyProperty.Register(nameof(Background), typeof(Brush), typeof(Control),
-                new PropertyMetadata((object?)null));
+        // Alias of FrameworkElement.BackgroundProperty so user IL calling our
+        // Control.set_Background on a non-Control instance (Minesweeper's
+        // Panorama IL does exactly that, inheriting the pre-patch Silverlight
+        // Panorama:Control chain) writes to the same DP slot that the
+        // renderer reads via Panel.Background. The static field stays so
+        // ldsfld Control::BackgroundProperty still resolves; Background is
+        // the FE-inherited CLR property.
+        public static readonly DependencyProperty BackgroundProperty = FrameworkElement.BackgroundProperty;
 
         public static readonly DependencyProperty BorderBrushProperty =
             DependencyProperty.Register(nameof(BorderBrush), typeof(Brush), typeof(Control),
@@ -34,11 +39,7 @@ namespace WPR.SilverlightCompability
             DependencyProperty.Register(nameof(IsEnabled), typeof(bool), typeof(Control),
                 new PropertyMetadata((object)true));
 
-        public Brush? Background
-        {
-            get => (Brush?)GetValue(BackgroundProperty);
-            set => SetValue(BackgroundProperty, value);
-        }
+        // Background is inherited from FrameworkElement — no shadow here.
 
         public Brush? BorderBrush
         {

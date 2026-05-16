@@ -17,9 +17,8 @@ namespace WPR.SilverlightCompability
     [ContentProperty(nameof(Child))]
     public class Border : FrameworkElement
     {
-        public static readonly DependencyProperty BackgroundProperty =
-            DependencyProperty.Register(nameof(Background), typeof(Brush), typeof(Border),
-                new PropertyMetadata((object?)null));
+        // Alias of FrameworkElement.BackgroundProperty — see FrameworkElement.cs.
+        public static readonly DependencyProperty BackgroundProperty = FrameworkElement.BackgroundProperty;
 
         public static readonly DependencyProperty BorderBrushProperty =
             DependencyProperty.Register(nameof(BorderBrush), typeof(Brush), typeof(Border),
@@ -41,11 +40,7 @@ namespace WPR.SilverlightCompability
             DependencyProperty.Register(nameof(Child), typeof(UIElement), typeof(Border),
                 new PropertyMetadata((object?)null, OnChildChanged));
 
-        public Brush? Background
-        {
-            get => (Brush?)GetValue(BackgroundProperty);
-            set => SetValue(BackgroundProperty, value);
-        }
+        // Background is inherited from FrameworkElement.
 
         public Brush? BorderBrush
         {
