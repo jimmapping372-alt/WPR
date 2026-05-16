@@ -1,8 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <CheckEolWorkloads>false</CheckEolWorkloads>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0-android34.0</TargetFramework>
-    <SupportedOSPlatformVersion>26</SupportedOSPlatformVersion>
+    <!-- 21 (Android 5.0) matches the TargetPlatformVersion that the
+         installed .NET 10 Android workload (android 36.1.43/10.0.100)
+         assigns to net8.0-android* — it has no net8.0-android manifest,
+         so it falls back to 21. Higher SOSV triggers NETSDK1135. -->
+    <SupportedOSPlatformVersion>21.0</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
     <AvaloniaVersion>11.1-beta1</AvaloniaVersion>
     <ApplicationId>com.MediaExplorer.WPR</ApplicationId>
@@ -11,7 +16,11 @@
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <EmbedAssembliesIntoApk>True</EmbedAssembliesIntoApk>
     <PublishTrimmed>False</PublishTrimmed>
-    <RuntimeIdentifiers>android-arm;android-arm64;android-x64</RuntimeIdentifiers>
+    <!-- android-arm (32-bit ARM, RID linux-bionic-arm) dropped: Google Play
+         has required 64-bit since 2019, and the 32-bit ARM runtime pack is
+         not installed on this machine (NU1101 for
+         Microsoft.NETCore.App.Runtime.linux-bionic-arm). -->
+    <RuntimeIdentifiers>android-arm64;android-x64</RuntimeIdentifiers>
     <XamarinGoogleGuavaListenableFutureOptOut>true</XamarinGoogleGuavaListenableFutureOptOut>
     <XamarinGoogleGuavaOptOut>true</XamarinGoogleGuavaOptOut>
   </PropertyGroup>

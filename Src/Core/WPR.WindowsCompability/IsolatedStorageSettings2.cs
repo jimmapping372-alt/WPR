@@ -142,12 +142,26 @@ namespace WPR.WindowsCompability
         }
 
         //RnD: static
-        // [MaybeNullWhen(false)] 
+        // [MaybeNullWhen(false)]
         public static bool TryGetValue(string key, out object value)
         {
             //value = true;
             return _Settings.TryGetValue(key, out value);
         }
+
+        public bool Contains(string key) => _Settings != null && _Settings.ContainsKey(key);
+
+        public bool Remove(string key) => _Settings != null && _Settings.Remove(key);
+
+        public void Add(string key, object value) => _Settings[key] = value;
+
+        public void Clear() => _Settings?.Clear();
+
+        public int Count => _Settings?.Count ?? 0;
+
+        public ICollection<string> Keys => _Settings?.Keys ?? (ICollection<string>)Array.Empty<string>();
+
+        public ICollection<object> Values => _Settings?.Values ?? (ICollection<object>)Array.Empty<object>();
 
         //RnD : static
         //public IsolatedStorageSettings2 get_ApplicationSettings()

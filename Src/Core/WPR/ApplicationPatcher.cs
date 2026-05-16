@@ -22,6 +22,7 @@ namespace WPR
         private AssemblyNameReference SystemRunTimeRef;
 
         private AssemblyNameReference WindowsCompRef;
+        private AssemblyNameReference SilverlightCompRef;
 
         private AssemblyNameReference StandardCompRef;
         private AssemblyNameReference ServiceModelPrimitivesRef;
@@ -45,6 +46,7 @@ namespace WPR
             FNACompRef = AssemblyNameReference.Parse("WPR.XnaCompability");
             SystemRunTimeRef = AssemblyNameReference.Parse("System.Runtime");
             WindowsCompRef = AssemblyNameReference.Parse("WPR.WindowsCompability");
+            SilverlightCompRef = AssemblyNameReference.Parse("WPR.SilverlightCompability");
 
             ServiceModelPrimitivesRef = AssemblyNameReference.Parse("System.ServiceModel.Primitives");
             ServiceModelHTTPRef = AssemblyNameReference.Parse("System.ServiceModel.Http");
@@ -142,22 +144,878 @@ namespace WPR
                     NewNamespace = "WPR.XnaCompability.Media"
                 }
                 },
+                { "Microsoft.Xna.Framework.Media.Picture", new TypePatchInfo()
+                {
+                    Reference = FNACompRef,
+                    NewNamespace = "WPR.XnaCompability.Media"
+                }
+                },
+                { "Microsoft.Xna.Framework.Media.PictureCollection", new TypePatchInfo()
+                {
+                    Reference = FNACompRef,
+                    NewNamespace = "WPR.XnaCompability.Media"
+                }
+                },
                 { "System.Windows.Media.SolidColorBrush", new TypePatchInfo()
                 {
-                    Reference = WindowsCompRef,
-                    NewNamespace = "WPR.WindowsCompability.Media"
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
                 }
                 },
                 { "System.Windows.Media.Color", new TypePatchInfo()
                 {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Media.Colors", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Media.Brush", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Media.ImageBrush", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Media.ImageSource", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Media.Animation.Timeline", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Media.Animation.Storyboard", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Media.Animation.TimelineCollection", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Media.Animation.DoubleAnimation", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Media.Animation.DoubleAnimationUsingKeyFrames", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Media.Animation.DoubleKeyFrame", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Media.Animation.EasingDoubleKeyFrame", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Media.Animation.LinearDoubleKeyFrame", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Media.Animation.DoubleKeyFrameCollection", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Media.Animation.KeyTime", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Media.Animation.KeyTimeType", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Media.Animation.RepeatBehavior", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Media.Animation.ClockState", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Media.Animation.FillBehavior", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Media.Animation.IEasingFunction", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                // Toolkit gesture types — declared in WPR.SilverlightCompability with
+                // namespace Microsoft.Phone.Controls so the patcher just retargets the
+                // assembly scope; everything else (the user IL's typeref name +
+                // namespace) stays as-is.
+                { "Microsoft.Phone.Controls.GestureService", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                }
+                },
+                { "Microsoft.Phone.Controls.GestureListener", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                }
+                },
+                { "Microsoft.Phone.Controls.GestureEventArgs", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                }
+                },
+                { "Microsoft.Phone.Controls.FlickGestureEventArgs", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                }
+                },
+                { "Microsoft.Phone.Controls.DragStartedGestureEventArgs", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                }
+                },
+                { "Microsoft.Phone.Controls.DragDeltaGestureEventArgs", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                }
+                },
+                { "Microsoft.Phone.Controls.DragCompletedGestureEventArgs", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                }
+                },
+                { "Microsoft.Phone.Controls.PhoneApplicationFrame", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "Microsoft.Phone.Controls.PhoneApplicationPage", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "Microsoft.Phone.Shell.PhoneApplicationService", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "Microsoft.Phone.Shell.IdleDetectionMode", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "Microsoft.Phone.Shell.StartupMode", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "Microsoft.Phone.Shell.DeactivationReason", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "Microsoft.Phone.Shell.LaunchingEventArgs", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "Microsoft.Phone.Shell.ClosingEventArgs", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "Microsoft.Phone.Shell.ActivatedEventArgs", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "Microsoft.Phone.Shell.DeactivatedEventArgs", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.Frame", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Navigation.NavigationService", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Navigation.NavigationMode", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Navigation.NavigationEventArgs", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Navigation.NavigatingCancelEventArgs", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Navigation.NavigationFailedEventArgs", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Navigation.NavigatedEventHandler", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Navigation.NavigatingCancelEventHandler", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Navigation.NavigationFailedEventHandler", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Navigation.NavigationStoppedEventHandler", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Navigation.JournalEntry", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Markup.XamlReader", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Markup.XamlParseException", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Markup.ContentPropertyAttribute", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.Panel", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.StackPanel", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.Orientation", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.UIElementCollection", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.Grid", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.DrawingSurfaceBackgroundGrid", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.ScrollViewer", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.ScrollBarVisibility", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.TextBox", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.Control", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.TextChangedEventArgs", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Input.Touch", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Input.TouchFrameEventHandler", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Input.TouchFrameEventArgs", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Input.TouchPoint", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Input.TouchPointCollection", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Input.TouchDevice", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Input.TouchAction", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.ColumnDefinition", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.RowDefinition", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.ColumnDefinitionCollection", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.RowDefinitionCollection", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.TextBlock", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.TextAlignment", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.TextWrapping", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.Canvas", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.Primitives.Popup", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.UserControl", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.ContentControl", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.Button", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.ItemsControl", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.Border", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Shapes.Shape", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Shapes.Rectangle", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.StyleTypedPropertyAttribute", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.TemplatePartAttribute", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.TemplateVisualStateAttribute", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Markup.XmlnsDefinitionAttribute", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability.Markup"
+                }
+                },
+                { "System.Windows.Markup.XmlnsPrefixAttribute", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability.Markup"
+                }
+                },
+                { "System.Windows.VisualState", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.VisualStateGroup", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.VisualStateManager", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.VisualTransition", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.VisualStateChangedEventArgs", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.SizeChangedEventHandler", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.SizeChangedEventArgs", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Media.CompositionTarget", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.ComponentModel.DesignerProperties", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                // Bulk: input
+                { "System.Windows.Input.ManipulationStartedEventArgs", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Input.ManipulationDeltaEventArgs", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Input.ManipulationCompletedEventArgs", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Input.ManipulationDelta", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Input.ManipulationVelocities", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Input.MouseButtonEventArgs", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Input.KeyEventArgs", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Input.Key", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                // Bulk: media — transforms
+                { "System.Windows.Media.GeneralTransform", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Media.Transform", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Media.TransformCollection", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Media.TransformGroup", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Media.TranslateTransform", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Media.CompositeTransform", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Media.Projection", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Media.PlaneProjection", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                // Bulk: media — misc
+                { "System.Windows.Media.Geometry", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Media.RectangleGeometry", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Media.GradientBrush", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Media.TileBrush", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Media.AlignmentX", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Media.AlignmentY", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Media.CacheMode", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Media.BitmapCache", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Media.VisualTreeHelper", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Media.Imaging.BitmapCreateOptions", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                // Bulk: animation easing
+                { "System.Windows.Media.Animation.ExponentialEase", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Media.Animation.QuarticEase", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Media.Animation.EasingMode", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                // Bulk: controls
+                { "System.Windows.Controls.CheckBox", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Controls.Primitives.ToggleButton", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Controls.Primitives.Selector", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Controls.Page", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Controls.ContentPresenter", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Controls.ItemsPresenter", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Controls.ItemCollection", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Controls.ItemContainerGenerator", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                // Bulk: data binding helpers
+                { "System.Windows.Data.IValueConverter", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Data.BindingExpressionBase", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Data.RelativeSource", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Data.RelativeSourceMode", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                // Bulk: fonts
+                { "System.Windows.FontWeight", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.FontWeights", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                // Bulk: misc top-level
+                { "System.Windows.Style", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.PropertyPath", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.Deployment", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                { "System.Windows.PresentationFrameworkCollection`1", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability" } },
+                // Bulk: threading
+                { "System.Windows.Threading.Dispatcher", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability.Threading" } },
+                { "System.Windows.Threading.DispatcherOperation", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability.Threading" } },
+                { "System.Windows.Threading.DispatcherTimer", new TypePatchInfo() { Reference = SilverlightCompRef, NewNamespace = "WPR.SilverlightCompability.Threading" } },
+                { "System.Windows.Controls.ListBox", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.SelectionMode", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.SelectionChangedEventArgs", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.SelectionChangedEventHandler", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.RoutedEventArgs", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.RoutedEventHandler", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.ExceptionRoutedEventArgs", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Controls.Image", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Media.Stretch", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Data.Binding", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Data.BindingMode", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.DataTemplate", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Resources.StreamResourceInfo", new TypePatchInfo()
+                {
                     Reference = WindowsCompRef,
-                    NewNamespace = "WPR.WindowsCompability.Media"
+                    NewNamespace = "WPR.WindowsCompability"
+                }
+                },
+                { "System.Windows.Interop.SilverlightHost", new TypePatchInfo()
+                {
+                    Reference = WindowsCompRef,
+                    NewNamespace = "WPR.WindowsCompability"
+                }
+                },
+                { "System.Windows.Interop.Content", new TypePatchInfo()
+                {
+                    Reference = WindowsCompRef,
+                    NewName = "SilverlightHostContent",
+                    NewNamespace = "WPR.WindowsCompability"
+                }
+                },
+                { "System.Windows.Interop.Settings", new TypePatchInfo()
+                {
+                    Reference = WindowsCompRef,
+                    NewName = "SilverlightHostSettings",
+                    NewNamespace = "WPR.WindowsCompability"
                 }
                 },
                 { "System.Windows.Thickness", new TypePatchInfo()
                 {
-                    Reference = WindowsCompRef,
-                    NewNamespace = "WPR.WindowsCompability.Media"
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.DependencyObject", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.DependencyProperty", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.PropertyMetadata", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.PropertyChangedCallback", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.DependencyPropertyChangedEventArgs", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.UIElement", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.FrameworkElement", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Visibility", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.HorizontalAlignment", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.VerticalAlignment", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.GridLength", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.GridUnitType", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.CornerRadius", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Size", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Point", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Rect", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
+                }
+                },
+                { "System.Windows.Duration", new TypePatchInfo()
+                {
+                    Reference = SilverlightCompRef,
+                    NewNamespace = "WPR.SilverlightCompability"
                 }
                 },
                 { "System.Windows.ResourceDictionary", new TypePatchInfo()
@@ -219,17 +1077,20 @@ namespace WPR
                 },
                 { "System.Windows.MessageBox", new TypePatchInfo()
                 {
-                    Reference = WindowsCompRef
+                    Reference = WindowsCompRef,
+                    NewNamespace = "WPR.WindowsCompability"
                 }
                 },
                 { "System.Windows.MessageBoxResult", new TypePatchInfo()
                 {
-                    Reference = WindowsCompRef
+                    Reference = WindowsCompRef,
+                    NewNamespace = "WPR.WindowsCompability"
                 }
                 },
                 { "System.Windows.MessageBoxButton", new TypePatchInfo()
                 {
-                    Reference = WindowsCompRef
+                    Reference = WindowsCompRef,
+                    NewNamespace = "WPR.WindowsCompability"
                 }
                 }
             };
@@ -555,6 +1416,7 @@ namespace WPR
             // Add AssemblyReferences
             module.AssemblyReferences.Add(FNACompRef);
             module.AssemblyReferences.Add(WindowsCompRef);
+            module.AssemblyReferences.Add(SilverlightCompRef);
             module.AssemblyReferences.Add(SystemRunTimeRef);
             module.AssemblyReferences.Add(ServiceModelPrimitivesRef);
             module.AssemblyReferences.Add(ServiceModelHTTPRef);
@@ -699,6 +1561,94 @@ namespace WPR
                 current++;
                 progress((int)(current * 100.0 / totalCount));
             }
+
+            // Post-patch cleanup: delete bundled DLLs that contribute nothing
+            // useful after typeref retargeting. Real WP toolkits ship copies of
+            // System.Windows.Interactivity / Microsoft.Expression.Interactions /
+            // Microsoft.Advertising.Mobile that the user game references in
+            // metadata but never actually exercises. Removing them eliminates
+            // duplicate type definitions (a common source of cross-assembly
+            // type-identity bugs — see GestureEventArgs) and shaves install
+            // size. The cleanup is conservative: it removes a DLL only when
+            // nothing else in the install dir (post-patch) still imports its
+            // assembly name as a reference.
+            try { CleanupUnreferencedBundledDlls(appRootPath); }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[i] CleanupUnreferencedBundledDlls failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Iteratively remove DLLs that no longer have inbound references from any
+        /// other DLL in <paramref name="appRootPath"/>. The user's main assembly
+        /// (the entry point) is treated as a permanent root. We loop until no
+        /// further DLLs can be pruned — handles transitive deletions
+        /// (e.g. Interactions referenced only by Expression, both then go).
+        /// </summary>
+        private static void CleanupUnreferencedBundledDlls(string appRootPath)
+        {
+            // Names of DLLs we'd consider stripping (anything that isn't a WPR
+            // shim and isn't the user's primary assembly. The user's assembly is
+            // identified loosely: keep every DLL whose presence the patcher
+            // explicitly touched at least once — for simplicity, "anything not
+            // in the strip-candidate list below stays").
+            // We start conservatively with a known-safe candidate set; can grow
+            // it later as we shim more types.
+            var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "Microsoft.Expression.Interactions",
+                "System.Windows.Interactivity",
+            };
+
+            // Loop: each pass removes any candidate whose name appears in no
+            // remaining DLL's AssemblyReferences.
+            bool changed;
+            do
+            {
+                changed = false;
+                string[] dlls = Directory.GetFiles(appRootPath, "*.dll", SearchOption.AllDirectories);
+
+                // Build inbound-reference set: which assembly names are still imported by SOMEONE?
+                var referenced = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (string dll in dlls)
+                {
+                    AssemblyDefinition? asm = null;
+                    try { asm = AssemblyDefinition.ReadAssembly(dll); }
+                    catch { continue; }
+                    using (asm)
+                    {
+                        foreach (var r in asm.MainModule.AssemblyReferences)
+                            referenced.Add(r.Name);
+                    }
+                }
+
+                foreach (string dll in dlls)
+                {
+                    string name;
+                    AssemblyDefinition? asm = null;
+                    try { asm = AssemblyDefinition.ReadAssembly(dll); name = asm.Name.Name; }
+                    catch { asm?.Dispose(); continue; }
+                    asm.Dispose();
+
+                    if (!candidates.Contains(name)) continue;
+                    if (referenced.Contains(name)) continue; // someone still imports it; skip this pass
+
+                    // Safe to remove: nobody imports this assembly anymore.
+                    try
+                    {
+                        File.Delete(dll);
+                        string original = dll + ".original";
+                        if (File.Exists(original)) File.Delete(original);
+                        Debug.WriteLine($"[i] Removed unreferenced bundled DLL: {Path.GetFileName(dll)}");
+                        changed = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[i] Couldn't delete '{dll}': {ex.Message}");
+                    }
+                }
+            } while (changed);
         }
     }
 }

@@ -11,7 +11,9 @@
     <CheckEolWorkloads>false</CheckEolWorkloads>
     <EFVersion Condition="'$(TargetFramework)' == 'net8.0-windows10.0.17763.0'">5.0.17</EFVersion>
     <EFVersion Condition="'$(TargetFramework)' != 'net8.0-windows10.0.17763.0'">6.0.8</EFVersion>
-    <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net8.0-android'">26</SupportedOSPlatformVersion>
+    <!-- 21 matches the TPV that the installed .NET 10 Android workload
+         assigns to bare net8.0-android. Higher values trigger NETSDK1135. -->
+    <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net8.0-android'">21.0</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>

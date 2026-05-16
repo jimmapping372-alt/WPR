@@ -407,9 +407,21 @@ namespace Microsoft.Xna.Framework
 		{
 			AssertNotDisposed();
 
+			Trace.WriteLine("[wpr-trace] Game.Run: enter");
+
 			if (!hasInitialized)
 			{
-				DoInitialize();
+				Trace.WriteLine("[wpr-trace] Game.Run: DoInitialize starting");
+				try
+				{
+					DoInitialize();
+				}
+				catch (Exception ex)
+				{
+					Trace.WriteLine("[wpr-ex] Game.Run - DoInitialize threw: " + ex);
+					throw;
+				}
+				Trace.WriteLine("[wpr-trace] Game.Run: DoInitialize done");
 				hasInitialized = true;
 			}
 
@@ -419,7 +431,7 @@ namespace Microsoft.Xna.Framework
 			}
 			catch (Exception ex)
             {
-                Debug.WriteLine("[ex] Game - BeginRun ex: " + ex.Message);
+                Trace.WriteLine("[wpr-ex] Game - BeginRun ex: " + ex);
             }
 
 			try
@@ -428,36 +440,37 @@ namespace Microsoft.Xna.Framework
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine("[ex] Game - BeforeLoop ex: " + ex.Message);
+				Trace.WriteLine("[wpr-ex] Game - BeforeLoop ex: " + ex);
 			}
 
 			try
 			{
 				gameTimer = Stopwatch.StartNew();
 			}
-			catch (Exception ex) 
+			catch (Exception ex)
 			{
-                Debug.WriteLine("[ex] Game - StartNow ex: " + ex.Message);
+                Trace.WriteLine("[wpr-ex] Game - StartNow ex: " + ex);
             }
 
+			Trace.WriteLine("[wpr-trace] Game.Run: entering RunLoop");
 			try
 			{
 				RunLoop();
 			}
 			catch (Exception ex)
 			{
-                Debug.WriteLine("[ex] Game - RunLoop ex: " + ex.Message);
-                Debug.WriteLine( "StackTrace: " + ex.StackTrace.ToString() );
+                Trace.WriteLine("[wpr-ex] Game - RunLoop ex: " + ex);
 				throw;
             }
+			Trace.WriteLine("[wpr-trace] Game.Run: RunLoop returned");
 
-			try 
+			try
 			{
 				EndRun();
-			} 
+			}
 			catch (Exception ex)
             {
-                Debug.WriteLine("[ex] Game - EndRun ex: " + ex.Message);
+                Trace.WriteLine("[wpr-ex] Game - EndRun ex: " + ex);
             }
 
 			try
@@ -466,9 +479,14 @@ namespace Microsoft.Xna.Framework
 			}
 			catch (Exception ex)
             {
-                Debug.WriteLine("[ex] Game - AfterLoop ex: " + ex.Message);
+                Trace.WriteLine("[wpr-ex] Game - AfterLoop ex: " + ex);
             }
 		}
+
+		// Counts the first few ticks so wpr-trace stage logs show that the game is actually
+		// reaching the main loop. After this threshold we stop logging per-tick to avoid
+		// flooding the debug log.
+		private int _wprTraceTickCount;
 
 		public void Tick()
 		{
@@ -477,6 +495,12 @@ namespace Microsoft.Xna.Framework
 			 * any change fully in both the fixed and variable timestep
 			 * modes across multiple devices and platforms.
 			 */
+
+			if (_wprTraceTickCount < 3)
+			{
+				Trace.WriteLine($"[wpr-trace] Game.Tick #{_wprTraceTickCount} (IsFixedTimeStep={IsFixedTimeStep}, suppressDraw={suppressDraw})");
+				_wprTraceTickCount++;
+			}
 
 			AdvanceElapsedTime();
 
@@ -540,7 +564,7 @@ namespace Microsoft.Xna.Framework
 					}
 					catch (Exception ex)
 					{
-						Debug.WriteLine("[ex] Game (gameTime) error: " + ex.Message);
+						Trace.WriteLine("[wpr-ex] Game.Update (fixed timestep) threw: " + ex);
 					}
 				}
 
@@ -605,11 +629,15 @@ namespace Microsoft.Xna.Framework
                 // Plan B
                 try
                 {
+                    if (_wprTraceTickCount >= 1 && _wprTraceTickCount <= 3)
+                    {
+                        Trace.WriteLine($"[wpr-trace] Game.Update #{_wprTraceTickCount - 1} starting (elapsed={gameTime.ElapsedGameTime.TotalMilliseconds:F2}ms)");
+                    }
                     Update(gameTime);
                 }
                 catch (Exception ex2)
                 {
-                    Debug.WriteLine("[ex2] Game (gameTime) error: " + ex2.Message);
+                    Trace.WriteLine("[wpr-ex] Game.Update (variable timestep) threw: " + ex2);
 					Exit();
                 }
             }
@@ -625,7 +653,22 @@ namespace Microsoft.Xna.Framework
 				 * http://stackoverflow.com/questions/4054936/manual-control-over-when-to-redraw-the-screen/4057180#4057180
 				 * http://stackoverflow.com/questions/4235439/xna-3-1-to-4-0-requires-constant-redraw-or-will-display-a-purple-screen
 				 */
-				if (BeginDraw())
+				bool beginOk = false;
+				try
+				{
+					beginOk = BeginDraw();
+				}
+				catch (Exception ex)
+				{
+					Trace.WriteLine("[wpr-ex] Game.BeginDraw threw: " + ex);
+				}
+				// _wprTraceTickCount was incremented at start of Tick, so post-increment
+				// values 1..3 correspond to tick indices 0..2.
+				if (_wprTraceTickCount >= 1 && _wprTraceTickCount <= 3)
+				{
+					Trace.WriteLine($"[wpr-trace] Game.Tick #{_wprTraceTickCount - 1}: BeginDraw -> {beginOk}");
+				}
+				if (beginOk)
 				{
 					try
 					{
@@ -633,7 +676,7 @@ namespace Microsoft.Xna.Framework
 					}
 					catch (Exception ex)
 					{
-						Debug.WriteLine("[ex] Game Draw ex. : " + ex.Message);
+						Trace.WriteLine("[wpr-ex] Game.Draw threw: " + ex);
 					}
 
 					try
@@ -642,7 +685,7 @@ namespace Microsoft.Xna.Framework
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine("[ex] Game EndDraw ex. : " + ex.Message);
+                        Trace.WriteLine("[wpr-ex] Game.EndDraw threw: " + ex);
                     }
 					                    
                 }

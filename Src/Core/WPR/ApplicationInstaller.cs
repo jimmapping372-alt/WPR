@@ -17,10 +17,101 @@ using WPR.Core;
 
 namespace WPR
 {
+    public class ApplicationPreview
+    {
+        public string Name { get; set; } = "";
+        public string Author { get; set; } = "Unknown";
+        public string Publisher { get; set; } = "Unknown";
+        public string Description { get; set; } = "";
+        public string Version { get; set; } = "";
+        public string ProductId { get; set; } = "";
+        public byte[]? IconBytes { get; set; }
+
+        /// <summary>
+        /// Parsed runtime type from <c>WMAppManifest.xml</c>'s <c>App@RuntimeType</c>
+        /// attribute. Null only if the attribute is missing or its value doesn't map
+        /// to a known <see cref="Models.ApplicationType"/>. Surfacing this on the
+        /// preview lets the desktop UI show "SILVERLIGHT" / "XNA" / "MODERN NATIVE"
+        /// in the detail-pane eyebrow for not-yet-installed apps, instead of the
+        /// generic "available to install" placeholder.
+        /// </summary>
+        public Models.ApplicationType? ApplicationType { get; set; }
+    }
+
     public static class ApplicationInstaller
     {
         private const string TempXmlFile = "temp.xml";
         private static string TempXmlFileFullPath => Configuration.Current!.DataPath(TempXmlFile);
+
+        public static ApplicationPreview? ReadPreview(Stream fileStream)
+        {
+            try
+            {
+                if (fileStream.CanSeek) fileStream.Position = 0;
+                using ZipArchive archive = new ZipArchive(fileStream, ZipArchiveMode.Read, leaveOpen: true);
+
+                ZipArchiveEntry? manifestEntry = archive.GetEntry("WMAppManifest.xml");
+                if (manifestEntry == null) return null;
+
+                XmlDocument manifestDoc = new XmlDocument();
+                using (Stream ms = manifestEntry.Open())
+                {
+                    manifestDoc.Load(ms);
+                }
+
+                XmlNode? appNode = manifestDoc.DocumentElement?.SelectSingleNode("//App");
+                if (appNode == null) return null;
+
+                XmlAttribute? titleAttrib = appNode.Attributes?["Title"];
+                XmlAttribute? versionAttrib = appNode.Attributes?["Version"];
+                XmlAttribute? productAttrib = appNode.Attributes?["ProductID"];
+
+                if (titleAttrib == null || versionAttrib == null || productAttrib == null) return null;
+
+                ApplicationPreview preview = new ApplicationPreview
+                {
+                    Name = titleAttrib.Value,
+                    Version = versionAttrib.Value,
+                    ProductId = productAttrib.Value.Trim('{').Trim('}'),
+                    Author = appNode.Attributes?["Author"]?.Value ?? "Unknown",
+                    Publisher = appNode.Attributes?["Publisher"]?.Value ?? "Unknown",
+                    Description = appNode.Attributes?["Description"]?.Value ?? "",
+                };
+
+                // WP8 manifests spell "Modern Native" with a space that Enum.TryParse
+                // rejects, matching the normalisation done during full install below.
+                string? runtimeRaw = appNode.Attributes?["RuntimeType"]?.Value;
+                if (!string.IsNullOrEmpty(runtimeRaw))
+                {
+                    string normalized = runtimeRaw.Replace(" ", "");
+                    if (Enum.TryParse(normalized, ignoreCase: true, out Models.ApplicationType parsed))
+                    {
+                        preview.ApplicationType = parsed;
+                    }
+                }
+
+                XmlNode? iconPathNode = appNode.SelectSingleNode("//IconPath");
+                if (iconPathNode != null)
+                {
+                    string iconPath = iconPathNode.InnerText;
+                    ZipArchiveEntry? iconEntry = archive.GetEntry(iconPath);
+                    if (iconEntry != null)
+                    {
+                        using Stream iconStream = iconEntry.Open();
+                        using MemoryStream buffer = new MemoryStream();
+                        iconStream.CopyTo(buffer);
+                        preview.IconBytes = buffer.ToArray();
+                    }
+                }
+
+                return preview;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(LogCategory.AppInstall, $"Failed to read XAP preview: {ex}");
+                return null;
+            }
+        }
 
         private static async Task<(ApplicationInstallError, Application?, string)> CreateApplicationEntryAndExtract(Stream fileStream, Action<int> progressSet, Func<Application, IObservable<bool>> deleteExistingApp, CancellationToken canceled)
         {
@@ -93,7 +184,10 @@ namespace WPR
                     }
                 }
 
-                if (!Enum.TryParse(runtimeTypeAttrb.Value, true, out ApplicationType runtimeTypeParsed))
+                // Normalize whitespace: WP8 manifests use values like "Modern Native" with a space
+                // that Enum.TryParse won't accept. Map to the equivalent enum identifier.
+                string normalizedRuntimeType = runtimeTypeAttrb.Value.Replace(" ", "");
+                if (!Enum.TryParse(normalizedRuntimeType, true, out ApplicationType runtimeTypeParsed))
                 {
                     return ( ApplicationInstallError.NotSupportedAppType, app, dataFolderProduct );
                 }
@@ -236,6 +330,60 @@ namespace WPR
                 if (error != ApplicationInstallError.None)
                 {
                     return error;
+                }
+
+                // Pre-patch: replace any WinRT .winmd / native .dll pairs with managed stubs
+                // so the user's IL can JIT against managed types. Best-effort — failures are
+                // logged but don't fail the install (a hybrid app may still partially work).
+                try
+                {
+                    await Task.Run(() =>
+                    {
+                        WinmdStubber.StubInPlace(appDataFolder);
+                        WindowsTypeSynthesizer.SynthesizeIfNeeded(appDataFolder);
+                        // After everything's stubbed, scrub WinRT content-type flag from every
+                        // asm ref. The user's own DLLs (compiled against .winmd) carry that
+                        // flag and the JIT throws PNS when it encounters one on net8.0.
+                        WinRtRefStripper.StripInPlace(appDataFolder);
+                        // GameMaker Studio apps: read-only scan of game.win for achievement
+                        // metadata, persist into AchievementContext so they show up in WPR's
+                        // UI. Doesn't modify game.win — that's important for the patcher pass
+                        // below, which uses the untouched original as input. No-op for non-GMS.
+                        GameMakerAchievementExtractor.ExtractInPlace(
+                            appDataFolder,
+                            app?.ProductId ?? "",
+                            app?.Name ?? "");
+
+                        // XNA / GamerServices apps: scrape the TrueAchievements catalogue
+                        // for this product and seed AchievementContext with all entries
+                        // marked locked. Lets the WPR UI show the full achievement list
+                        // immediately, and — more importantly — guarantees rows exist
+                        // by the time the game calls AwardAchievement, which only flips
+                        // IsEarned on rows that are already present.
+                        // Best-effort; the existing lazy path in SignedInGamer.BeginGetAchievements
+                        // still works if this fails. We block on the task so the install
+                        // pipeline completes deterministically.
+                        try { XnaAchievementSeeder.SeedAsync(app?.ProductId ?? "", app?.Name ?? "", appDataFolder).GetAwaiter().GetResult(); }
+                        catch (Exception ex)
+                        {
+                            Log.Warn(LogCategory.AppInstall, $"XnaAchievementSeeder failed (non-fatal): {ex.Message}");
+                        }
+
+                        // Surgical bytecode neutralization: produces game.win.patched as a
+                        // sibling. One specific script (achievements_add) gets its body
+                        // replaced with a single Exit opcode so games like Briquid Mini boot
+                        // past the WP-specific FATAL where god.PreCreate calls
+                        // achievements_add before achievements_define has run. NO compiler
+                        // invocation, NO other scripts touched — minimizes the chance of
+                        // breaking variable scope info on Runner 2.1.4.200.
+                        // Original game.win is never modified; the launcher prefers .patched
+                        // when present, falls back to original when absent.
+                        GameMakerWinPatcher.PatchInPlace(appDataFolder);
+                    });
+                }
+                catch (Exception exception)
+                {
+                    Log.Warn(LogCategory.AppInstall, $"WinRT stubbing failed (non-fatal):\n{exception}");
                 }
 
                 // 20% for patching DLLs

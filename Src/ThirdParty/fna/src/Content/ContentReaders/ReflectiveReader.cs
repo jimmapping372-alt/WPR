@@ -268,6 +268,23 @@ namespace Microsoft.Xna.Framework.Content
 				};
 			}
 
+			/* WPR change: System.Object-typed members are polymorphic in the XNB format —
+			 * the runtime type-reader index is encoded on the wire. FNA's stock path
+			 * GetTypeReader(typeof(object)) returns null because no reader registers
+			 * itself for object, which throws. Use the polymorphic ReadObject<object>
+			 * path instead so the per-instance type tag drives dispatch. Fable Coin
+			 * Golf and other WP7 games using object/non-generic-collection fields hit
+			 * this without the special case.
+			 */
+			if (elementType == typeof(object))
+			{
+				return (input, parent) =>
+				{
+					object obj2 = input.ReadObject<object>();
+					setter(parent, obj2);
+				};
+			}
+
 			// We need to have a reader at this point.
 			ContentTypeReader reader = manager.GetTypeReader(elementType);
 			if (reader == null)

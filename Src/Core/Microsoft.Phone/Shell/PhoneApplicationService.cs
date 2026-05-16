@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Microsoft.Phone.Shell
 {
@@ -22,7 +23,23 @@ namespace Microsoft.Phone.Shell
 
         public void HandleApplicationStart(bool anew)
         {
-            _Activated?.Invoke(this, new ActivatedEventArgs(!anew));
+            Trace.WriteLine($"[wpr-trace] PhoneApplicationService.HandleApplicationStart(anew={anew}) firing Launching+Activated. " +
+                $"Subscribers: Launching={CountInvocations(_Launching)} Activated={CountInvocations(_Activated)}");
+
+            // WP7 fires Launching on a fresh launch (anew=true) and Activated on resume
+            // (anew=false, IsApplicationInstancePreserved=true). We previously fired only
+            // Activated which left games that initialize in Application_Launching wedged on
+            // their splash forever (e.g. MonstaFish drawing Clear(Color.Black) and nothing
+            // else because the scene system never got built).
+            if (anew)
+            {
+                try { _Launching?.Invoke(this, new LaunchingEventArgs()); }
+                catch (Exception ex) { Trace.WriteLine("[wpr-ex] PhoneApplicationService.Launching handler threw: " + ex); }
+            }
+
+            try { _Activated?.Invoke(this, new ActivatedEventArgs(!anew)); }
+            catch (Exception ex) { Trace.WriteLine("[wpr-ex] PhoneApplicationService.Activated handler threw: " + ex); }
+
             _AppActivated = true;
         }
 
@@ -35,12 +52,15 @@ namespace Microsoft.Phone.Shell
             Current = new PhoneApplicationService();
         }
 
+        private static int CountInvocations(Delegate? d) => d?.GetInvocationList().Length ?? 0;
+
         private event EventHandler<ActivatedEventArgs>? _Activated;
 
         public event EventHandler<ActivatedEventArgs>? Activated
         {
             add
             {
+                Trace.WriteLine($"[wpr-trace] PhoneApplicationService.Activated += handler (_AppActivated={_AppActivated})");
                 if (_AppActivated)
                 {
                     value?.Invoke(this, new ActivatedEventArgs(false));
@@ -56,8 +76,26 @@ namespace Microsoft.Phone.Shell
             }
         }
         public event EventHandler<DeactivatedEventArgs>? Deactivated;
-        public event EventHandler<LaunchingEventArgs>? Launching;
+
+        private event EventHandler<LaunchingEventArgs>? _Launching;
+        public event EventHandler<LaunchingEventArgs>? Launching
+        {
+            add
+            {
+                Trace.WriteLine($"[wpr-trace] PhoneApplicationService.Launching += handler");
+                _Launching += value;
+            }
+            remove { _Launching -= value; }
+        }
         public event EventHandler<ClosingEventArgs>? Closing;
+
+        /// <summary>
+        /// WP8 fast-app-resume signal. Some apps wire <c>App.xaml</c> handlers like
+        /// <c>RunningInBackground="OnRunningInBackground"</c>; the type must exist for the
+        /// XAML-driven Delegate.CreateDelegate parameter resolution to succeed. Never raised
+        /// by WPR — desktop has no equivalent lifecycle phase.
+        /// </summary>
+        public event EventHandler<RunningInBackgroundEventArgs>? RunningInBackground;
 
         public StartupMode StartupMode { get => StartupMode.Launch; }
 

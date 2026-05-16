@@ -13,6 +13,11 @@ namespace WPR.Common
             public string? RegistrationToken;
             public string? UserEmail;
             public bool IsRegistered;
+            public string? GameLibraryPath;
+            // WP7 system accent color, persisted as "#AARRGGBB" hex (with leading '#').
+            // Null = use the WP7 default "Cyan" (#FF1BA1E2). Consumed by
+            // WPR.SilverlightCompability.PhoneTheme on launch.
+            public string? AccentColor;
         };
 
         private const string ConfigurationFilePath = "config.json";
@@ -49,6 +54,25 @@ namespace WPR.Common
             get => _ConfPrivate!.IsRegistered;
             set => _ConfPrivate!.IsRegistered = value;
         }
+
+        public string? GameLibraryPath
+        {
+            get => _ConfPrivate!.GameLibraryPath;
+            set
+            {
+                if (_ConfPrivate!.GameLibraryPath == value) return;
+                _ConfPrivate!.GameLibraryPath = value;
+                GameLibraryPathChanged?.Invoke(this, value);
+            }
+        }
+
+        public string? AccentColor
+        {
+            get => _ConfPrivate!.AccentColor;
+            set => _ConfPrivate!.AccentColor = value;
+        }
+
+        public static event EventHandler<string?>? GameLibraryPathChanged;
 
         public static Configuration? Current { get; set; }
 
