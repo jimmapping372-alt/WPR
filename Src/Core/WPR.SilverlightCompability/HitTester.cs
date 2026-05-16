@@ -108,7 +108,21 @@ namespace WPR.SilverlightCompability
                     break;
 
                 case ContentControl cc when cc.Presenter != null:
-                    Recurse(cc.Presenter, lx, ly, chain);
+                    // PanoramaItem can be scrolled by the pointer pipeline; the
+                    // renderer paints its content with a -ScrollY translation
+                    // and a viewport clip. To make taps land on what the user
+                    // actually sees, fold the same scroll offset into the
+                    // descent coordinate so deeper-down content becomes
+                    // reachable at the visible position. Without this, tapping
+                    // an item in a scrolled-up list would hit a child arranged
+                    // below the viewport — usually nothing.
+                    double scrollY = 0;
+                    if (cc.GetType().FullName == "Microsoft.Phone.Controls.PanoramaItem")
+                    {
+                        var st = PanoramaItemScrollTable.TryGet(cc);
+                        if (st != null) scrollY = st.ScrollY;
+                    }
+                    Recurse(cc.Presenter, lx, ly + scrollY, chain);
                     break;
             }
         }

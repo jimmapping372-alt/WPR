@@ -140,6 +140,16 @@ namespace WPR.SilverlightCompability
                 DrawProgressBar(ctx, element, bounds);
                 return;
             }
+            // The toolkit's ToggleSwitch is a heavily-templated Control that
+            // shows a Header above a sliding On/Off track. We don't apply its
+            // template, so without intercepting it here we'd see only the
+            // toolkit's default Content ("Off") as bare text. Render it
+            // ourselves: header + chunky WP7-style track + thumb + state text.
+            if (typeName == "Microsoft.Phone.Controls.ToggleSwitch")
+            {
+                DrawToggleSwitch(ctx, element, bounds);
+                return;
+            }
 
             switch (element)
             {
@@ -163,7 +173,14 @@ namespace WPR.SilverlightCompability
                     // or clipped against the parent.
                     break;
 
-                // ContentControl / PhoneApplicationPage / Button all share: paint Background, then render Presenter.
+                // Button comes BEFORE the generic ContentControl case so its
+                // WP7 chrome (white border, padded interior, centered text)
+                // is applied instead of falling through to bare Content paint.
+                case Button btn:
+                    DrawButton(ctx, btn, bounds);
+                    break;
+
+                // ContentControl / PhoneApplicationPage all share: paint Background, then render Presenter.
                 case ContentControl cc:
                     PaintBrush(ctx, cc.Background, bounds);
                     if (cc.Presenter != null)
@@ -408,6 +425,143 @@ namespace WPR.SilverlightCompability
             }
         }
 
+        /// <summary>
+        /// Paint a WP7-style button: a 3-DIP solid foreground outline around
+        /// the content, optional Background fill, and the Content (text or
+        /// nested element) centered inside the padded interior. The toolkit's
+        /// real default Style sets BorderBrush=PhoneForegroundBrush (white),
+        /// BorderThickness=3, Padding=10,3,10,5, Background=Transparent —
+        /// without applying that Style ourselves the button collapses to bare
+        /// text, which is what the user sees in HelpOptionsPage today.
+        /// </summary>
+        private static void DrawButton(DrawingContext ctx, Button btn, global::Avalonia.Rect bounds)
+        {
+            // Padded inner box where the Content paints; keep the border outside.
+            const double pad = 10;
+            const double minHeight = 72; // WP7 minimum tap-target for buttons.
+            // Background — Transparent by default (no paint), but if user set
+            // an explicit colour honour it inside the border.
+            AvBrush? bgBrush = ConvertBrush(btn.Background);
+            if (bgBrush != null && !IsEffectivelyTransparent(btn.Background))
+                ctx.FillRectangle(bgBrush, bounds);
+
+            // Border. ContentControl-based Button has no BorderBrush DP in our
+            // shim (Control adds it, but Button branches off via ContentControl
+            // for compat with both the System.Windows.Controls.Button and the
+            // toolkit's PhoneApplicationFrame template). Hard-code WP7's
+            // default: PhoneForegroundBrush, 3 DIP.
+            AvBrush borderBrush = ResolveResourceBrush("PhoneForegroundBrush")
+                ?? new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Colors.White);
+            var pen = new global::Avalonia.Media.Pen(borderBrush, 3.0);
+            ctx.DrawRectangle(null, pen, bounds);
+
+            // Render Content. The Button shim wraps a non-UIElement Content in
+            // a TextBlock, so we walk the Presenter. ContentControl's measure
+            // didn't account for our injected padding, so re-arrange the
+            // presenter inside the padded interior centered both axes.
+            UIElement? p = btn.Presenter;
+            if (p == null) return;
+
+            var innerBounds = new global::Avalonia.Rect(
+                bounds.X + pad,
+                bounds.Y + pad,
+                Math.Max(0, bounds.Width - pad * 2),
+                Math.Max(0, Math.Max(bounds.Height, minHeight) - pad * 2));
+
+            // Center the presenter's natural size inside innerBounds. Measure
+            // it against the available width to honour wrapping if the user
+            // configured a TextWrapping="Wrap" on a TextBlock content.
+            p.Measure(new Size(innerBounds.Width, double.PositiveInfinity));
+            var ds = p.DesiredSize;
+            double w = Math.Min(ds.Width, innerBounds.Width);
+            double h = Math.Min(ds.Height, innerBounds.Height);
+            double cx = innerBounds.X + (innerBounds.Width - w) / 2;
+            double cy = innerBounds.Y + (innerBounds.Height - h) / 2;
+            var presBounds = new global::Avalonia.Rect(cx, cy, w, h);
+            // Sync ArrangedRect so child Render reads correct coords.
+            p.Arrange(new Rect(presBounds.X - bounds.X, presBounds.Y - bounds.Y, w, h));
+            Render(ctx, p, presBounds);
+        }
+
+        /// <summary>
+        /// Paint a WP7-style ToggleSwitch: header text above a chunky On/Off
+        /// pill, with the state word ("On"/"Off") to the right. The toolkit
+        /// type is heavily templated; we never apply the template, so without
+        /// this path the user just sees the toolkit's default Content text
+        /// (typically "Off") with no chrome and no header.
+        ///
+        /// Reflection-driven so we don't have to take a reference on
+        /// Microsoft.Phone.Controls.Toolkit.dll — we read Header, IsChecked,
+        /// and SwitchForeground from whatever object the renderer is handed.
+        /// </summary>
+        private static void DrawToggleSwitch(DrawingContext ctx, UIElement element, global::Avalonia.Rect bounds)
+        {
+            object? headerObj = TryReadProperty(element, "Header");
+            object? checkedObj = TryReadProperty(element, "IsChecked");
+            bool isOn = checkedObj is bool b ? b : false;
+
+            // Accent for the "on" state — falls back to white if the theme
+            // dictionary isn't seeded (e.g., very early in launch).
+            AvBrush accent = ResolveResourceBrush("PhoneAccentBrush")
+                ?? new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromRgb(0x1B, 0xA1, 0xE2));
+            // SwitchForeground (the thumb) — defaults to white in WP7 default theme.
+            AvBrush thumbBrush = ResolveResourceBrush("PhoneForegroundBrush")
+                ?? new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Colors.White);
+            AvBrush textBrush = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Colors.White);
+
+            // 1) Header text at top-left, semi-light 22pt.
+            double y = bounds.Y + 4;
+            string? header = headerObj?.ToString();
+            if (!string.IsNullOrWhiteSpace(header))
+            {
+                var headerFont = new AvTypeface("Segoe WP", default, global::Avalonia.Media.FontWeight.Normal);
+                var headerText = new AvFormattedText(header!, CultureInfo.CurrentUICulture,
+                    AvFlowDirection.LeftToRight, headerFont, 22.0, textBrush);
+                ctx.DrawText(headerText, new global::Avalonia.Point(bounds.X, y));
+                y += headerText.Height + 6;
+            }
+
+            // 2) Track + thumb.
+            const double trackWidth = 95;
+            const double trackHeight = 38;
+            const double thumbInset = 4;
+            double trackX = bounds.X;
+            double trackY = y;
+            var trackRect = new global::Avalonia.Rect(trackX, trackY, trackWidth, trackHeight);
+
+            // When On, fill the track with accent; when Off, just outline.
+            if (isOn)
+            {
+                ctx.FillRectangle(accent, trackRect);
+            }
+            else
+            {
+                var trackPen = new global::Avalonia.Media.Pen(textBrush, 2);
+                ctx.DrawRectangle(null, trackPen, trackRect);
+            }
+
+            // Thumb: small rectangle inside, right side when on, left when off.
+            double thumbWidth = (trackWidth - thumbInset * 3) / 2; // half-track minus padding
+            double thumbX = isOn
+                ? trackX + trackWidth - thumbInset - thumbWidth
+                : trackX + thumbInset;
+            var thumbRect = new global::Avalonia.Rect(
+                thumbX,
+                trackY + thumbInset,
+                thumbWidth,
+                trackHeight - thumbInset * 2);
+            ctx.FillRectangle(thumbBrush, thumbRect);
+
+            // 3) State word ("On" / "Off") to the right of the track.
+            string stateWord = isOn ? "On" : "Off";
+            var stateFont = new AvTypeface("Segoe WP", default, global::Avalonia.Media.FontWeight.Normal);
+            var stateText = new AvFormattedText(stateWord, CultureInfo.CurrentUICulture,
+                AvFlowDirection.LeftToRight, stateFont, 24.0, textBrush);
+            double stateX = trackX + trackWidth + 12;
+            double stateY = trackY + (trackHeight - stateText.Height) / 2;
+            ctx.DrawText(stateText, new global::Avalonia.Point(stateX, stateY));
+        }
+
         /// <summary>Best-effort read of a numeric DP value, returning <paramref name="fallback"/>
         /// on any conversion failure. Used by <see cref="DrawProgressBar"/> for
         /// Value/Minimum/Maximum on the rare determinate-mode bar.</summary>
@@ -460,6 +614,12 @@ namespace WPR.SilverlightCompability
             // Same relative-vs-absolute split as DrawPanoramaLike: ArrangedRect
             // is the presenter's relative position WITHIN the PanoramaItem; the
             // Render bounds carry the absolute draw rect.
+            //
+            // Real WP7 wraps panorama-item content in a ScrollViewer via the
+            // toolkit template — we don't apply templates so the content
+            // visibly overflows. Apply our own vertical scroll offset (set by
+            // the pointer pipeline on vertical drag) and clip to the item's
+            // content bounds so overflow doesn't bleed past.
             if (element is ContentControl cc)
             {
                 UIElement? presenter = cc.Presenter;
@@ -467,8 +627,27 @@ namespace WPR.SilverlightCompability
                 {
                     double relX = contentBounds.X - bounds.X;
                     double relY = contentBounds.Y - bounds.Y;
-                    presenter.Measure(new Size(contentBounds.Width, contentBounds.Height));
-                    presenter.Arrange(new Rect(relX, relY, contentBounds.Width, contentBounds.Height));
+
+                    // Measure with unbounded height so the content's natural
+                    // size — which can exceed contentBounds.Height — is known.
+                    // Without this, the presenter measures clamped to the
+                    // viewport and we'd think we have nothing to scroll.
+                    presenter.Measure(new Size(contentBounds.Width, double.PositiveInfinity));
+                    double contentH = Math.Max(contentBounds.Height, presenter.DesiredSize.Height);
+                    presenter.Arrange(new Rect(relX, relY, contentBounds.Width, contentH));
+
+                    var scroll = PanoramaItemScrollTable.GetOrCreate(element);
+                    double maxScroll = Math.Max(0, contentH - contentBounds.Height);
+                    if (scroll.ScrollY < 0) scroll.ScrollY = 0;
+                    if (scroll.ScrollY > maxScroll) scroll.ScrollY = maxScroll;
+
+                    // Clip rendering to the visible content bounds so off-screen
+                    // children don't paint over neighbouring panorama items or
+                    // the page background. Then translate up by ScrollY so the
+                    // viewport shows further-down content.
+                    using var clip = ctx.PushClip(contentBounds);
+                    using var transform = ctx.PushTransform(
+                        global::Avalonia.Matrix.CreateTranslation(0, -scroll.ScrollY));
                     Render(ctx, presenter, contentBounds);
                 }
             }
