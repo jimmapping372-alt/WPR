@@ -132,19 +132,25 @@ moving target — entries are tagged with where they currently sit on the
 | `Broken`   | Doesn't boot, crashes early, or is missing critical shims. |
 | `Untested` | Reported playable on legacy WPR; not re-verified on this fork. |
 
-### Currently being worked on
+### Current status
 
-| Game | Status   | Notes                                                                                                          |
-| --- |----------|----------------------------------------------------------------------------------------------------------------|
-| Zuma's Revenge | Playable | Game-screen scaling fix. <br><img src="Images/zr-01.png" width="200"> <img src="Images/zr-02.png" width="200"> |
-| Minesweeper `[SL]` | Partial  | Help and Options pages now load; bottom app bar z-order fixed. Core gameplay still under verification.         |
-| Penguins Can't Fly | Broken   | `NullReferenceException` in `Penguin.PenguinGame.get_MenuShowing()` — missing shim/initialisation.             |
-| Acedia: Indie Horror | Broken   | `InvalidOperationException: Sequence contains no elements` during `Activator.CreateInstance`.                  |
-| Asphalt Pogonya | Broken   | `PlatformNotSupportedException` on `PhoneDirect3DXamlAppInterop.App` (Direct3D XAML hybrid not supported).     |
-| Tentacles | Broken   | `MissingMethodException: WPR.WindowsCompability.IsolatedStorageSettings2.Contains(String)`.                    |
-| Fruit Ninja | Broken   | `MissingMethodException: Microsoft.Xna.Framework.GamerServices.GamerProfile.GetGamerPicture()`.                |
-| Dig It | Broken   | `MissingMethodException: Microsoft.Xna.Framework.GamerServices.LeaderboardReader.get_TotalLeaderboardSize()`.  |
-| Mirror's Edge | Broken   | Crashes on launch (RE in progress, see commit `c5e988d9`).                                                     |
+
+| Game                 | Status   | Notes                                                                                                         |
+|----------------------|----------|---------------------------------------------------------------------------------------------------------------|
+| 3D Brick Breaker     | Playable | Working <br><img src="Images/3dbb_01.png" width="200"> <img src="Images/3dbb_02.png" width="200">             |
+| Bejeweled Live +     | Playable | Working <br><img src="Images/blp_01.png" width="100"> <img src="Images/blp_02.png" width="100">               |
+| Brain Challenge      | Playable | Working <br><img src="Images/bc_01.png" width="100"> <img src="Images/bc_02.png" width="100">                 |
+| Bug Village          | Playable | Working <br><img src="Images/bv_01.png" width="200"> <img src="Images/bv_02.png" width="200">                 |
+| Castlevania Puzzle   | Partial  | Loads but unable to start arcade or story mode <br><img src="Images/cvp_01.png" width="200">                  |
+| Zuma's Revenge       | Playable | Working <br><img src="Images/zr-01.png" width="200"> <img src="Images/zr-02.png" width="200">                 |
+| Minesweeper `[SL]`   | Partial  | Help and Options pages now load; bottom app bar z-order fixed. Core gameplay still under verification.        |
+| Penguins Can't Fly   | Broken   | `NullReferenceException` in `Penguin.PenguinGame.get_MenuShowing()` — missing shim/initialisation.            |
+| Acedia: Indie Horror | Broken   | `InvalidOperationException: Sequence contains no elements` during `Activator.CreateInstance`.                 |
+| Asphalt Pogonya      | Broken   | `PlatformNotSupportedException` on `PhoneDirect3DXamlAppInterop.App` (Direct3D XAML hybrid not supported).    |
+| Tentacles            | Broken   | `MissingMethodException: WPR.WindowsCompability.IsolatedStorageSettings2.Contains(String)`.                   |
+| Fruit Ninja          | Broken   | `MissingMethodException: Microsoft.Xna.Framework.GamerServices.GamerProfile.GetGamerPicture()`.               |
+| Dig It               | Broken   | `MissingMethodException: Microsoft.Xna.Framework.GamerServices.LeaderboardReader.get_TotalLeaderboardSize()`. |
+| Mirror's Edge        | Broken   | Crashes on launch (RE in progress, see commit `c5e988d9`).                                                    |
 
 ### Reported by community on legacy WPR (Oct 2023)
 
@@ -153,44 +159,40 @@ port. They have **not** all been re-verified on this fork yet — treat as
 historical baseline. Source:
 [Thetouchedjoe's compatibility list](Research/Thetouchedjoe%20-%20WPR.txt).
 
-| Game | Legacy status | Notes |
-| --- | --- | --- |
-| Bejeweled Live Plus | Playable | Untested on this fork |
-| Brain Challenge | Playable | Untested on this fork |
-| Bug Village | Playable | Untested on this fork |
-| Castlevania Puzzle | Playable | Untested on this fork |
-| Civilization Revolution | Playable | Untested on this fork |
-| Cro-Mag Rally | Playable | Untested on this fork |
-| Dream Track Nation | Playable | Untested on this fork |
-| Final Fantasy 3 | Playable | Untested on this fork |
-| I Love Katamari | Playable | Untested on this fork |
-| ilomilo | Playable | Untested on this fork |
-| Kinectimals | Playable | Untested on this fork |
-| Max and the Magic Marker | Playable | Untested on this fork |
-| MonstaFish | Playable | Untested on this fork |
-| More Brain Exercise | Playable | Untested on this fork |
-| NFS Undercover | Playable | Untested on this fork |
-| Pac-Man | Playable | Untested on this fork |
-| Skulls of the Shogun | Playable | Untested on this fork |
-| Sonic 4 Episode 1 | Playable | Untested on this fork |
-| Star Wars Cantina | Playable | Untested on this fork |
-| The Sims 3 | Playable | Untested on this fork |
-| The Sims Medieval | Playable | Untested on this fork |
-| Tiki Towers | Playable | Untested on this fork |
-| Tower Bloxx | Playable | Untested on this fork |
-| Assassin's Creed: Altaïr's Chronicles | Partial | Graphics bug on low-end / newer devices |
-| DeBlob Revolution | Partial | Can't progress past first set of stages — crashes on completion |
-| Earthworm Jim | Partial | Crashes intermittently |
-| Guitar Hero 5 Mobile | Partial | Crashes before music starts |
-| Ragdoll Run | Partial | Buggy |
-| Final Fantasy | Broken | Black screen after intro |
-| Hydro Thunder GO | Broken | Corrupted graphics, crash on race start |
-| Star Wars: Battle of the Hoth | Broken | Menu cannot select anything |
-| Angry Birds | Broken | Crashes on launch |
-| Asphalt 5 | Broken | Crashes at loading screen |
-| BBB: App-ocalypse | Broken | Error screen on load |
-| Crimson Dragon: Side Story | Broken | Error screen on load |
-| Plants vs Zombies | Broken | Crashes |
+| Game                                  | Legacy status | Notes                                                           |
+|---------------------------------------|---------------|-----------------------------------------------------------------|
+| Civilization Revolution               | Playable      | Untested on this fork                                           |
+| Cro-Mag Rally                         | Playable      | Untested on this fork                                           |
+| Dream Track Nation                    | Playable      | Untested on this fork                                           |
+| Final Fantasy 3                       | Playable      | Untested on this fork                                           |
+| I Love Katamari                       | Playable      | Untested on this fork                                           |
+| ilomilo                               | Playable      | Untested on this fork                                           |
+| Kinectimals                           | Playable      | Untested on this fork                                           |
+| Max and the Magic Marker              | Playable      | Untested on this fork                                           |
+| MonstaFish                            | Playable      | Untested on this fork                                           |
+| More Brain Exercise                   | Playable      | Untested on this fork                                           |
+| NFS Undercover                        | Playable      | Untested on this fork                                           |
+| Pac-Man                               | Playable      | Untested on this fork                                           |
+| Skulls of the Shogun                  | Playable      | Untested on this fork                                           |
+| Sonic 4 Episode 1                     | Playable      | Untested on this fork                                           |
+| Star Wars Cantina                     | Playable      | Untested on this fork                                           |
+| The Sims 3                            | Playable      | Untested on this fork                                           |
+| The Sims Medieval                     | Playable      | Untested on this fork                                           |
+| Tiki Towers                           | Playable      | Untested on this fork                                           |
+| Tower Bloxx                           | Playable      | Untested on this fork                                           |
+| Assassin's Creed: Altaïr's Chronicles | Partial       | Graphics bug on low-end / newer devices                         |
+| DeBlob Revolution                     | Partial       | Can't progress past first set of stages — crashes on completion |
+| Earthworm Jim                         | Partial       | Crashes intermittently                                          |
+| Guitar Hero 5 Mobile                  | Partial       | Crashes before music starts                                     |
+| Ragdoll Run                           | Partial       | Buggy                                                           |
+| Final Fantasy                         | Broken        | Black screen after intro                                        |
+| Hydro Thunder GO                      | Broken        | Corrupted graphics, crash on race start                         |
+| Star Wars: Battle of the Hoth         | Broken        | Menu cannot select anything                                     |
+| Angry Birds                           | Broken        | Crashes on launch                                               |
+| Asphalt 5                             | Broken        | Crashes at loading screen                                       |
+| BBB: App-ocalypse                     | Broken        | Error screen on load                                            |
+| Crimson Dragon: Side Story            | Broken        | Error screen on load                                            |
+| Plants vs Zombies                     | Broken        | Crashes                                                         |
 
 > If you re-test any of these and the status has changed (good or bad),
 > please open an issue with the build hash + error so this table can be
@@ -217,7 +219,6 @@ The installer recognises three `.xap` flavours
   errors above (`IsolatedStorageSettings2.Contains`, `GamerProfile.GetGamerPicture`,
   `LeaderboardReader.TotalLeaderboardSize`, etc.) are usually missing shims, not
   bugs in the runner itself.
-- Zuma's Revenge viewport scaling.
 - Silverlight runtime: only a handful of controls + the Panorama/Pivot machine
   have been implemented; `LongListSelector`, `WrapPanel`, `PhoneTextBox`,
   `PerformanceProgressBar`, `GestureService` / `GestureListener` and several
@@ -250,6 +251,11 @@ A common gotcha — patcher changes do **not** affect already-installed games:
 - Per-game install data lives under `%LocalAppData%\WPR\Apps\<ProductId>`,
   with a `<game>.dll.original` sibling kept for re-patching.
 
+## Update History
+### 17/05/2026
+- Fix: Small bug on second launch of XNA games, where resources arent released fully
+- Feat: Added Windows based notifications
+- Feat: Added game icon as window icon for XNA
 
 ## Credits
 

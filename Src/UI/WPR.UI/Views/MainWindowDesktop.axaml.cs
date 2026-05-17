@@ -37,15 +37,15 @@ namespace WPR.UI.Views
 
                 try
                 {
-                    //TODO: fix notification mechanizm
                     if (NativeUI.NotificationManager != null)
-                    _ = NativeUI.NotificationManager.ShowNotification(new DesktopNotifications.Notification()
-                    {
-                        Title = Properties.Resources.LaunchingInProcess,
-                        Body = args.Target.Name!,
-                        BodyImagePath = Configuration.Current!.DataPath(args.Target.IconPath),//ImagePath = Configuration.Current!.DataPath(args.Target.IconPath)
-                        BodyImageAltText = "BodyImageAltText"
-                    }, expirationTime: DateTime.Now + TimeSpan.FromSeconds(5));
+                        _ = NativeUI.NotificationManager.ShowNotification(new DesktopNotifications.Notification()
+                        {
+                            Title = Properties.Resources.LaunchingInProcess,
+                            Body = args.Target.Name!,
+                            // Game icon goes into the avatar slot — the manager circle-crops it.
+                            ImagePath = Configuration.Current!.DataPath(args.Target.IconPath),
+                            AttributionText = "Windows Phone Reimplementation",
+                        }, expirationTime: DateTime.Now + TimeSpan.FromSeconds(5));
                 }
                 catch (Exception ex)
                 {
@@ -68,7 +68,7 @@ namespace WPR.UI.Views
                     }
                     else
                     {
-                        await ApplicationLaunch.Start(args.Target, default);
+                        await XnaLauncher.LaunchAsync(args.Target);
                     }
                 }
                 catch (Exception ex)

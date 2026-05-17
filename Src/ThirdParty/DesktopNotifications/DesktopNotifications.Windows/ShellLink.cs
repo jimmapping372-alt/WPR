@@ -316,6 +316,17 @@ namespace DesktopNotifications.Windows
             set => VerifySucceeded(shellLinkW!.SetArguments(value));
         }
 
+        // Path to the .ico (or .exe with embedded icons) that Explorer / the toast
+        // notification chrome uses for the app-branding glyph. Setter only.
+        public string IconLocation
+        {
+            set
+            {
+                if (string.IsNullOrEmpty(value)) return;
+                VerifySucceeded(shellLinkW!.SetIconLocation(value, 0));
+            }
+        }
+
         // AppUserModelID to be used for Windows 7 or later.
         public string AppUserModelID
         {

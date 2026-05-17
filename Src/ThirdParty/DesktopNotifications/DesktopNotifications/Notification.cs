@@ -22,6 +22,13 @@ namespace DesktopNotifications
 
         public string? BodyImageAltText { get; set; }
 
+        /// <summary>
+        /// Optional small attribution text rendered at the bottom of the toast, used for
+        /// branding (e.g. "Windows Phone Reimplementation"). Platform-styled — Windows
+        /// renders it in a smaller, dimmer font separated from the body.
+        /// </summary>
+        public string? AttributionText { get; set; }
+
         // NOTE: This only works on packaged app (Android or WinRT)
         // The sound name needs to be in resource folder
         public string? SoundUri { get; set; }

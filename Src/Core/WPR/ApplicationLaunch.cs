@@ -40,15 +40,41 @@ namespace WPR
         private static string CurrentProductFolder => Path.Combine(Configuration.Current.DataPath(Application.DataStoreFolder),
             WindowsCompability.Application.Current!.ProductId!);
 
+        /// <summary>
+        /// The collectible ALC for the currently-running user game, or null between launches.
+        /// Set by <see cref="Start"/> right after the ALC is created and cleared after unload.
+        /// </summary>
+        private static AssemblyLoadContext? _CurrentUserAlc;
+
         static ApplicationLaunch()
         {
+            // When default-ALC code (e.g. FNA's ContentTypeReaderManager doing Type.GetType
+            // for a user content reader) asks to resolve a user assembly, route the load
+            // into the CURRENT collectible ALC. Returning the foreign-ALC assembly from this
+            // handler is valid — the default ALC treats it as a reference but the assembly
+            // and its statics remain in the user ALC, so they go away cleanly on unload.
+            //
+            // The previous implementation called `loadContext.LoadFromAssemblyPath(...)`,
+            // which loaded the user dll INTO the default ALC (loadContext == Default). That
+            // permanently contaminated the default ALC with launch-1 user types — their
+            // statics persisted across launches and FNA's static
+            // ContentTypeReaderManager.contentReadersCache pinned launch-1 reader instances
+            // forever. Symptom: launch-2 SexyFramework code ended up cross-wired with
+            // launch-1 driver singletons, manifesting as NREs deep in the content load path
+            // (e.g. Music.RegisterCallBack NRE because mApp.mMusicInterface was never set
+            // on the launch-2 SexyAppBase).
             AssemblyLoadContext.Default.Resolving += (loadContext, name) =>
             {
-                return loadContext.LoadFromAssemblyPath(Path.Combine(CurrentProductFolder, name.Name + ".dll"));
+                var userAlc = _CurrentUserAlc;
+                if (userAlc == null) return null;
+                string candidate = Path.Combine(CurrentProductFolder, name.Name + ".dll");
+                if (!File.Exists(candidate)) return null;
+                try { return userAlc.LoadFromAssemblyPath(candidate); }
+                catch { return null; }
             };
         }
 
-        public static async Task Start(Application app, Action<DisplayOrientation>? requestOrientation = null)
+        public static async Task Start(Application app, Action<DisplayOrientation>? requestOrientation = null, Action<Game>? onGameCreated = null)
         {
             if (app.ApplicationType == ApplicationType.Silverlight)
             {
@@ -124,6 +150,11 @@ namespace WPR
                     return null;
                 }
             };
+            // Publish the ALC so the Default.Resolving handler routes user-assembly loads
+            // here instead of contaminating the default ALC. Must be set BEFORE LoadFromAssemblyPath
+            // because the main assembly's load can trigger dependency resolution that hits the
+            // default ALC handler.
+            _CurrentUserAlc = alc;
             Assembly assem = alc.LoadFromAssemblyPath(asmPath);
 
             Directory.SetCurrentDirectory(folderPath);
@@ -151,11 +182,27 @@ namespace WPR
                     GestureType.HorizontalDrag | GestureType.VerticalDrag | GestureType.FreeDrag |
                     GestureType.Pinch | GestureType.Flick | GestureType.DragComplete | GestureType.PinchComplete;
 
-                using (Game? obj = Activator.CreateInstance(mainType!) as Game)
+                // Manage Game lifetime explicitly (no using) so we can interleave teardown:
+                // Game.Dispose has to run BEFORE FAudio is destroyed (Game.Content.Dispose
+                // disposes SoundEffectInstances which destroy their FAudio source voices —
+                // those calls are invalid once the FAudio engine handle is released), but
+                // ALC unload and WPR-side singleton reset have to run AFTER Game.Dispose
+                // (the game's Dispose may still touch our shims).
+                Game? obj = Activator.CreateInstance(mainType!) as Game;
+                try
                 {
                     CurrentGame = obj;
                     obj!.IsMouseVisible = true;
                     obj!.Window.Title = $"{app.Name} - {app.Author} (Publisher: {app.Publisher})";
+
+                    // Hook for the host to decorate the just-created SDL window (e.g. set the
+                    // game's icon via SDL_SetWindowIcon). Best-effort: a host that throws here
+                    // shouldn't prevent the game from running.
+                    if (onGameCreated != null)
+                    {
+                        try { onGameCreated(obj); }
+                        catch (Exception ex) { Log.Warn(LogCategory.AppList, $"onGameCreated hook threw: {ex.Message}"); }
+                    }
 
                     // Re-affirm in case the user game's ctor reset these (it shouldn't, but
                     // the cost is one static field write).
@@ -262,20 +309,32 @@ namespace WPR
                         }
                         catch { }
 
-                        // Tear down audio so songs don't keep playing after the game window
-                        // closes. Game.Dispose only disposes Components / Content / GraphicsDevice
-                        // / Window — it never stops MediaPlayer (a static singleton) or releases
-                        // FAudio's master voice. Without this, MediaPlayer.Play(Song) leaves
-                        // FAudio's audio thread alive after the game exits and music continues.
-                        TeardownAudioState();
+                        // MediaPlayer.Stop has to happen while FAudio is still alive — it sends
+                        // an FAudio call. The rest of audio teardown waits until after Game.Dispose.
+                        try { Microsoft.Xna.Framework.Media.MediaPlayer.Stop(); }
+                        catch (Exception ex) { Log.Warn(LogCategory.AppList, $"MediaPlayer.Stop on teardown threw: {ex.Message}"); }
                     }
                 }
+                finally
+                {
+                    // Game.Dispose runs here. It walks Components, Content (disposes loaded
+                    // SoundEffects → SoundEffectInstances → destroys their FAudio source voices),
+                    // GraphicsDevice, and the SDL window. All of that requires FAudio to still
+                    // be alive, which is why TeardownAudioState is below.
+                    try { obj?.Dispose(); }
+                    catch (Exception ex) { Log.Warn(LogCategory.AppList, $"Game.Dispose threw: {ex.Message}"); }
+                }
+
+                // Now safe to tear down the audio engine itself: every SoundEffectInstance has
+                // released its source voice via Content.Dispose above.
+                TeardownAudioState();
 
                 // Drop user-assembly references then unload the ALC so the .dll is freed and any
                 // statics inside the user assembly (timers, caches) can be reclaimed.
                 try
                 {
                     PhoneApplicationService.Current?.HandleApplicationExit();
+                    ResetWprSingletons();
                     alc.Unload();
                     GC.Collect();
                     GC.WaitForPendingFinalizers();
@@ -302,29 +361,43 @@ namespace WPR
 
         /// <summary>
         /// Tear down FNA's audio state so a song started via <c>MediaPlayer.Play</c> doesn't
-        /// keep playing after <see cref="Game.Dispose"/>. Two layers:
-        /// <list type="bullet">
-        ///   <item><description><see cref="Microsoft.Xna.Framework.Media.MediaPlayer.Stop"/> halts
-        ///     the active song's FAudio source voice (XNA_StopSong).</description></item>
+        /// keep playing after <see cref="Game.Dispose"/> and so the audio subsystems aren't
+        /// left bound to a destroyed FAudio engine when the next game launches. Three layers,
+        /// in this order:
+        /// <list type="number">
+        ///   <item><description><see cref="Microsoft.Xna.Framework.Media.MediaPlayer.DisposeIfNecessary"/>
+        ///     calls <c>FAudio.XNA_SongQuit</c> and clears MediaPlayer's <c>initialized</c>
+        ///     static — without this, MediaPlayer skips re-init on the next launch because
+        ///     <c>initialized</c> is still true, but the song subsystem it's pointing at was
+        ///     bound to a now-destroyed FAudio engine, and subsequent <c>XNA_PlaySong</c>
+        ///     calls hit dangling internal state.</description></item>
         ///   <item><description>Reflective dispose of FNA's internal <c>FAudioContext.Context</c>
-        ///     singleton releases the master voice and the FAudio engine. FNA never disposes
-        ///     this on its own — it's a static and games don't own it. Without releasing it,
-        ///     FAudio's native audio thread keeps the audio device open even after the game
-        ///     exits, and any future game session creates a fresh context instead of reusing.
-        ///     Reflection avoids touching the vendored FNA copy.</description></item>
+        ///     singleton releases the master voice and the FAudio engine handle. FNA only ever
+        ///     nulls this from inside its own Dispose() so we have to drive that path. Caller
+        ///     must have already disposed every live <c>SoundEffectInstance</c>: those hold
+        ///     FAudio source voices that need to be destroyed via the still-live engine.</description></item>
         /// </list>
-        /// All best-effort: any failure is logged and swallowed because we're already on the
-        /// teardown path.
+        /// Caller is responsible for stopping <c>MediaPlayer</c> while FAudio is still alive
+        /// (it issues an FAudio call). All steps here are best-effort: any failure is logged
+        /// and swallowed because we're already on the teardown path.
         /// </summary>
         private static void TeardownAudioState()
         {
             try
             {
-                Microsoft.Xna.Framework.Media.MediaPlayer.Stop();
+                // FNA exposes DisposeIfNecessary as internal — reflection. Without this the
+                // 'initialized' static stays true across launches and the new FAudio engine
+                // ends up with no song subsystem registered, manifesting as silent audio or
+                // NREs deep inside the next game's resource loader.
+                Type? mp = typeof(Microsoft.Xna.Framework.Media.MediaPlayer);
+                MethodInfo? disposeIfNecessary = mp.GetMethod(
+                    "DisposeIfNecessary",
+                    BindingFlags.NonPublic | BindingFlags.Static);
+                disposeIfNecessary?.Invoke(null, null);
             }
             catch (Exception ex)
             {
-                Log.Warn(LogCategory.AppList, $"MediaPlayer.Stop on teardown threw: {ex.Message}");
+                Log.Warn(LogCategory.AppList, $"MediaPlayer.DisposeIfNecessary on teardown threw: {ex.Message}");
             }
 
             try
@@ -346,6 +419,68 @@ namespace WPR
             {
                 Log.Warn(LogCategory.AppList, $"FAudioContext dispose on teardown threw: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Mirror of the singleton reset that <c>SilverlightLauncher</c> performs on window
+        /// close. The XNA path historically skipped this, so the second launch of an XNA game
+        /// inherited launch-1's <c>Application.Current</c>, <c>PhoneApplicationService.Current</c>,
+        /// and <c>HostContext</c> state — including event subscribers pinned to types in the
+        /// previous (unloaded) ALC. Best-effort; any single failure is logged and skipped.
+        /// </summary>
+        private static void ResetWprSingletons()
+        {
+            // Application.Current lazy-creates a fresh instance on the next access, so it's
+            // safe to clear to null here.
+            try { WindowsCompability.Application.ResetCurrent(); }
+            catch (Exception ex) { Log.Warn(LogCategory.AppList, $"Application.ResetCurrent threw: {ex.Message}"); }
+
+            try
+            {
+                // PhoneApplicationService.Current is a plain `=> _Current` getter (no lazy
+                // init — the cctor seeds it once per process), so we must REPLACE the
+                // singleton with a fresh instance, not null. The new instance's public ctor
+                // sets _Current = this internally; we still SetValue afterwards to be
+                // explicit. Without this swap, event subscribers added by launch 1 stay
+                // wired to types in the unloaded ALC, and any cross-launch handler invoke
+                // would touch dead types.
+                Type t = typeof(WPR.SilverlightCompability.PhoneApplicationService);
+                FieldInfo? f = t.GetField("_Current", BindingFlags.NonPublic | BindingFlags.Static);
+                object? fresh = Activator.CreateInstance(t);
+                f?.SetValue(null, fresh);
+            }
+            catch (Exception ex) { Log.Warn(LogCategory.AppList, $"PhoneApplicationService reset threw: {ex.Message}"); }
+
+            try
+            {
+                WPR.SilverlightCompability.HostContext.UserAssembly = null;
+                WPR.SilverlightCompability.HostContext.CurrentProductId = null;
+                WPR.SilverlightCompability.HostContext.CurrentInstallFolder = null;
+            }
+            catch (Exception ex) { Log.Warn(LogCategory.AppList, $"HostContext reset threw: {ex.Message}"); }
+
+            try
+            {
+                // FNA's ContentTypeReaderManager.contentReadersCache is a private static
+                // Dictionary<Type, ContentTypeReader> that's never cleared. It caches reader
+                // instances keyed by user-assembly Type objects, which pins the previous
+                // launch's user ALC alive forever and (if AppDomain.GetAssemblies fallback
+                // is hit) lets launch-2's content path see launch-1's reader. FNA exposes
+                // ClearTypeCreators which only clears the *creator-func* dict, not this one.
+                // Reach in by reflection.
+                Type? ctrm = typeof(Microsoft.Xna.Framework.Content.ContentTypeReaderManager);
+                FieldInfo? cacheField = ctrm.GetField(
+                    "contentReadersCache",
+                    BindingFlags.NonPublic | BindingFlags.Static);
+                if (cacheField?.GetValue(null) is System.Collections.IDictionary cacheDict)
+                {
+                    cacheDict.Clear();
+                }
+            }
+            catch (Exception ex) { Log.Warn(LogCategory.AppList, $"ContentTypeReaderManager.contentReadersCache reset threw: {ex.Message}"); }
+
+            // Stop routing default-ALC resolves to this (now-unloading) user ALC.
+            _CurrentUserAlc = null;
         }
 
         private static string BuildDiagnostics(Game? obj, Exception ex)

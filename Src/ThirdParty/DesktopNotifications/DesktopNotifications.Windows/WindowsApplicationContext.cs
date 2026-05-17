@@ -20,7 +20,8 @@ namespace DesktopNotifications.Windows
 
         public static WindowsApplicationContext FromCurrentProcess(
             string? customName = null,
-            string? appUserModelId = null)
+            string? appUserModelId = null,
+            string? iconPath = null)
         {
             var mainModule = Process.GetCurrentProcess().MainModule;
 
@@ -40,6 +41,14 @@ namespace DesktopNotifications.Windows
                 Arguments = string.Empty,
                 AppUserModelID = aumid
             };
+
+            // Explicit icon for the shortcut. Toasts use this for the app-branding
+            // glyph at the top-left. Without it Windows falls back to the .exe's
+            // embedded icon, which on this build is the empty/default placeholder.
+            if (!string.IsNullOrEmpty(iconPath) && File.Exists(iconPath))
+            {
+                shortcut.IconLocation = iconPath!;
+            }
 
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             var startMenuPath = Path.Combine(appData, @"Microsoft\Windows\Start Menu\Programs");

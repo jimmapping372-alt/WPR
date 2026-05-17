@@ -20,6 +20,9 @@
   </PropertyGroup>
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
+    <!-- Source the repo-root brand logo as a linked Avalonia resource so XAML can
+         reference it at /Assets/logo.png without duplicating the file. -->
+    <AvaloniaResource Include="..\..\..\Images\logo.png" Link="Assets\logo.png" />
     <AvaloniaXaml Remove="Models\**" />
     <Compile Remove="Models\**" />
     <EmbeddedResource Remove="Models\**" />

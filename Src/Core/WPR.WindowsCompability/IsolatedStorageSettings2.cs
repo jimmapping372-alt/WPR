@@ -18,7 +18,11 @@ namespace WPR.WindowsCompability
         private const string LocalSettingsName = "__LocalSettings";
 
         private IsolatedStorageFile _Holder;
-        private static Dictionary<string, object> _Settings;
+        // Pre-initialise so static accessors (TryGetValue, indexer, Contains, Remove, Add,
+        // Save) are NRE-safe even when the patcher routes a call here before the user code
+        // has triggered the ApplicationSettings getter. The .ctor overwrites this with the
+        // on-disk dictionary; until then, reads return defaults and writes accumulate.
+        private static Dictionary<string, object> _Settings = new Dictionary<string, object>();
 
         public IsolatedStorageSettings2()// RnD: static
         {
@@ -66,7 +70,14 @@ namespace WPR.WindowsCompability
 
         public void Save()
         {
-            using (IsolatedStorageFileStream storage = _Holder.CreateFile(LocalSettingsName))
+            // Force the singleton path: the patcher rewrites IsolatedStorageSettings.Save
+            // call sites without guaranteeing the instance was previously materialised, so
+            // _Holder can be null here. Drive the ApplicationSettings getter to ensure
+            // there's a backing IsolatedStorageFile to write to.
+            IsolatedStorageFile? holder = _Holder ?? ApplicationSettings._Holder;
+            if (holder == null) return;
+
+            using (IsolatedStorageFileStream storage = holder.CreateFile(LocalSettingsName))
             {
                 DataContractSerializer serializer = new DataContractSerializer(typeof(Dictionary<string, object>));
                 serializer.WriteObject(storage, _Settings);
