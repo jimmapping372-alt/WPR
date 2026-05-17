@@ -1,5 +1,5 @@
 # WPR 0.0.17-alpha
-![](Images/logo.png)
+![](Images/Wpr_logo.png)
 
 WPR is a Windows Phone 7/8 game runner that re-hosts XNA (and, increasingly,
 Silverlight) titles on modern Windows desktop and Android. This is a fork of
