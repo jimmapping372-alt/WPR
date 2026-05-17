@@ -170,7 +170,7 @@ that isn't part of the change itself:
 - System .NET SDK: `C:\Program Files\dotnet` — **.NET 10.0.203**, Android
   workload `36.1.43/10.0.100` (no .NET 8 manifest). Rider's MSBuild uses
   this one.
-- User-local .NET SDK: `C:\Users\BenSl\.dotnet` — **.NET 8.0.420**, Android
+- User-local .NET SDK: `C:\Users\{user}\.dotnet` — **.NET 8.0.420**, Android
   workload `34.0.154`. **Not visible to Rider** — don't pin to it via
   `global.json` or builds will fail with `NETSDK1141`.
 - Android SDK platforms installed at `C:\Program Files (x86)\Android\android-sdk\platforms`:
