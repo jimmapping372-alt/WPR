@@ -135,22 +135,23 @@ moving target — entries are tagged with where they currently sit on the
 ### Current status
 
 
-| Game                 | Status   | Notes                                                                                                         |
-|----------------------|----------|---------------------------------------------------------------------------------------------------------------|
-| 3D Brick Breaker     | Playable | Working <br><img src="Images/3dbb_01.png" width="200"> <img src="Images/3dbb_02.png" width="200">             |
-| Bejeweled Live +     | Playable | Working <br><img src="Images/blp_01.png" width="100"> <img src="Images/blp_02.png" width="100">               |
-| Brain Challenge      | Playable | Working <br><img src="Images/bc_01.png" width="100"> <img src="Images/bc_02.png" width="100">                 |
-| Bug Village          | Playable | Working <br><img src="Images/bv_01.png" width="200"> <img src="Images/bv_02.png" width="200">                 |
-| Castlevania Puzzle   | Partial  | Loads but unable to start arcade or story mode <br><img src="Images/cvp_01.png" width="200">                  |
-| Zuma's Revenge       | Playable | Working <br><img src="Images/zr-01.png" width="200"> <img src="Images/zr-02.png" width="200">                 |
-| Minesweeper `[SL]`   | Partial  | Help and Options pages now load; bottom app bar z-order fixed. Core gameplay still under verification.        |
-| Penguins Can't Fly   | Broken   | `NullReferenceException` in `Penguin.PenguinGame.get_MenuShowing()` — missing shim/initialisation.            |
-| Acedia: Indie Horror | Broken   | `InvalidOperationException: Sequence contains no elements` during `Activator.CreateInstance`.                 |
-| Asphalt Pogonya      | Broken   | `PlatformNotSupportedException` on `PhoneDirect3DXamlAppInterop.App` (Direct3D XAML hybrid not supported).    |
-| Tentacles            | Broken   | `MissingMethodException: WPR.WindowsCompability.IsolatedStorageSettings2.Contains(String)`.                   |
-| Fruit Ninja          | Broken   | `MissingMethodException: Microsoft.Xna.Framework.GamerServices.GamerProfile.GetGamerPicture()`.               |
-| Dig It               | Broken   | `MissingMethodException: Microsoft.Xna.Framework.GamerServices.LeaderboardReader.get_TotalLeaderboardSize()`. |
-| Mirror's Edge        | Broken   | Crashes on launch (RE in progress, see commit `c5e988d9`).                                                    |
+| Game                 | Status   | Notes                                                                                                                                                                                                          |
+|----------------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 3D Brick Breaker     | Playable | Working <br><img src="Images/3dbb_01.png" width="200"> <img src="Images/3dbb_02.png" width="200">                                                                                                              |
+| Bejeweled Live +     | Playable | Working <br><img src="Images/blp_01.png" width="100"> <img src="Images/blp_02.png" width="100">                                                                                                                |
+| Brain Challenge      | Playable | Working <br><img src="Images/bc_01.png" width="100"> <img src="Images/bc_02.png" width="100">                                                                                                                  |
+| Bug Village          | Playable | Working <br><img src="Images/bv_01.png" width="200"> <img src="Images/bv_02.png" width="200">                                                                                                                  |
+| Castlevania Puzzle   | Partial  | Loads but unable to start arcade or story mode <br><img src="Images/cvp_01.png" width="200">                                                                                                                   |
+| Hydro Thunder GO     | Partial  | Runs but can be slow to initially load. No accelerometer functionality yet (change settings to wheel/throttle in game) <br><img src="Images/htg_01.png" width="200"> <img src="Images/htg_02.png" width="200"> |
+| Zuma's Revenge       | Playable | Working <br><img src="Images/zr-01.png" width="200"> <img src="Images/zr-02.png" width="200">                                                                                                                  |
+| Minesweeper `[SL]`   | Partial  | Help and Options pages now load; bottom app bar z-order fixed. Core gameplay still under verification.                                                                                                         |
+| Penguins Can't Fly   | Broken   | `NullReferenceException` in `Penguin.PenguinGame.get_MenuShowing()` — missing shim/initialisation.                                                                                                             |
+| Acedia: Indie Horror | Broken   | `InvalidOperationException: Sequence contains no elements` during `Activator.CreateInstance`.                                                                                                                  |
+| Asphalt Pogonya      | Broken   | `PlatformNotSupportedException` on `PhoneDirect3DXamlAppInterop.App` (Direct3D XAML hybrid not supported).                                                                                                     |
+| Tentacles            | Broken   | `MissingMethodException: WPR.WindowsCompability.IsolatedStorageSettings2.Contains(String)`.                                                                                                                    |
+| Fruit Ninja          | Broken   | `MissingMethodException: Microsoft.Xna.Framework.GamerServices.GamerProfile.GetGamerPicture()`.                                                                                                                |
+| Dig It               | Broken   | `MissingMethodException: Microsoft.Xna.Framework.GamerServices.LeaderboardReader.get_TotalLeaderboardSize()`.                                                                                                  |
+| Mirror's Edge        | Broken   | Crashes on launch (RE in progress, see commit `c5e988d9`).                                                                                                                                                     |
 
 ### Reported by community on legacy WPR (Oct 2023)
 
@@ -186,7 +187,6 @@ historical baseline. Source:
 | Guitar Hero 5 Mobile                  | Partial       | Crashes before music starts                                     |
 | Ragdoll Run                           | Partial       | Buggy                                                           |
 | Final Fantasy                         | Broken        | Black screen after intro                                        |
-| Hydro Thunder GO                      | Broken        | Corrupted graphics, crash on race start                         |
 | Star Wars: Battle of the Hoth         | Broken        | Menu cannot select anything                                     |
 | Angry Birds                           | Broken        | Crashes on launch                                               |
 | Asphalt 5                             | Broken        | Crashes at loading screen                                       |

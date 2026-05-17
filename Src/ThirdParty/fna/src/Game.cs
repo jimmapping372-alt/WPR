@@ -496,9 +496,11 @@ namespace Microsoft.Xna.Framework
 			 * modes across multiple devices and platforms.
 			 */
 
-			if (_wprTraceTickCount < 3)
+			bool wprTraceThisTick = _wprTraceTickCount < 3;
+			int wprTraceIndex = _wprTraceTickCount;
+			if (wprTraceThisTick)
 			{
-				Trace.WriteLine($"[wpr-trace] Game.Tick #{_wprTraceTickCount} (IsFixedTimeStep={IsFixedTimeStep}, suppressDraw={suppressDraw})");
+				Trace.WriteLine($"[wpr-trace] Game.Tick #{wprTraceIndex} (IsFixedTimeStep={IsFixedTimeStep}, suppressDraw={suppressDraw})");
 				_wprTraceTickCount++;
 			}
 
@@ -629,9 +631,9 @@ namespace Microsoft.Xna.Framework
                 // Plan B
                 try
                 {
-                    if (_wprTraceTickCount >= 1 && _wprTraceTickCount <= 3)
+                    if (wprTraceThisTick)
                     {
-                        Trace.WriteLine($"[wpr-trace] Game.Update #{_wprTraceTickCount - 1} starting (elapsed={gameTime.ElapsedGameTime.TotalMilliseconds:F2}ms)");
+                        Trace.WriteLine($"[wpr-trace] Game.Update #{wprTraceIndex} starting (elapsed={gameTime.ElapsedGameTime.TotalMilliseconds:F2}ms)");
                     }
                     Update(gameTime);
                 }
@@ -662,11 +664,9 @@ namespace Microsoft.Xna.Framework
 				{
 					Trace.WriteLine("[wpr-ex] Game.BeginDraw threw: " + ex);
 				}
-				// _wprTraceTickCount was incremented at start of Tick, so post-increment
-				// values 1..3 correspond to tick indices 0..2.
-				if (_wprTraceTickCount >= 1 && _wprTraceTickCount <= 3)
+				if (wprTraceThisTick)
 				{
-					Trace.WriteLine($"[wpr-trace] Game.Tick #{_wprTraceTickCount - 1}: BeginDraw -> {beginOk}");
+					Trace.WriteLine($"[wpr-trace] Game.Tick #{wprTraceIndex}: BeginDraw -> {beginOk}");
 				}
 				if (beginOk)
 				{

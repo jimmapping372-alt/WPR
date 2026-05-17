@@ -10,28 +10,10 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
         }
 
-        public GamerPresenceMode PresenceMode
-        {
-            get
-            {
-                throw new NotImplementedException();
-            }
-            set
-            {
-                throw new NotImplementedException();
-            }
-        }
+        // No Xbox LIVE presence to report — store and return what the game set so the
+        // property round-trips, which is all WP7 titles ever observed of it.
+        public GamerPresenceMode PresenceMode { get; set; }
 
-        public int PresenceValue
-        {
-            get
-            {
-                throw new NotImplementedException();
-            }
-            set
-            {
-                throw new NotImplementedException();
-            }
-        }
+        public int PresenceValue { get; set; }
     }
 }
