@@ -21,19 +21,18 @@ namespace WPR.UI
         {
             RequestedThemeVariant = ThemeVariant.Dark;
 
-            var mainViewModel = new MainWindowViewModel();
-            var mainView = new MainViewMobile { DataContext = mainViewModel };
-
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 desktop.MainWindow = new MainWindowDesktop
                 {
-                    DataContext = mainViewModel,
+                    DataContext = new MainWindowViewModel(),
                 };
-            }
-            else if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
+            } else if (ApplicationLifetime is ISingleViewApplicationLifetime mobile)
             {
-                singleView.MainView = mainView;
+                mobile.MainView = new MainViewMobile
+                {
+                    DataContext = new MainWindowViewModel()
+                };
             }
 
             base.OnFrameworkInitializationCompleted();

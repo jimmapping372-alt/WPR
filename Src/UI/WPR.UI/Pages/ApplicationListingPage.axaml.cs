@@ -13,7 +13,6 @@ using WPR.Models;
 using WPR.Common;
 using Avalonia.Platform.Storage;
 using Avalonia.Interactivity;
-using Avalonia.Input;
 
 namespace WPR.UI.Pages
 {

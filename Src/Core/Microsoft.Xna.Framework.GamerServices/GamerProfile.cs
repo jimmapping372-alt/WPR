@@ -17,7 +17,7 @@ namespace Microsoft.Xna.Framework.GamerServices
 
         public void Dispose()
         {
-            throw new NotImplementedException();
+            IsDisposed = true;
         }
 
         public Texture2D GamerPicture

@@ -273,20 +273,25 @@ namespace Microsoft.Xna.Framework.GamerServices
 
         public void AwardAchievement(string achievementKey) => EndAwardAchievement(BeginAwardAchievement(achievementKey, null, null));
 
+        private static readonly FriendCollection EmptyFriends = new FriendCollection();
+        private static readonly GameDefaults DefaultGameDefaults = new GameDefaults();
+        private static readonly AvatarDescription DefaultAvatar = AvatarDescription.CreateRandom();
+
         public FriendCollection GetFriends()
         {
-            throw new NotImplementedException();
+            return EmptyFriends;
         }
 
         public bool IsFriend(Gamer gamer)
         {
-            throw new NotImplementedException();
+            return false;
         }
+
         public AvatarDescription Avatar
         {
             get
             {
-                throw new NotImplementedException();
+                return DefaultAvatar;
             }
         }
 
@@ -294,7 +299,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return DefaultGameDefaults;
             }
         }
 
@@ -312,7 +317,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return 0;
             }
         }
 

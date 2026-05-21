@@ -16,8 +16,6 @@ using Android.OS;
 using Newtonsoft.Json;
 using WPR.Common;
 using WPR.UI;
-using WPR.UI.ViewModels;
-using WPR.UI.Views;
 using Avalonia.Controls.ApplicationLifetimes;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,8 +24,6 @@ using System.Threading.Tasks;
 using Android.Util;
 using Android.Widget;
 using Android.Runtime;
-using WPR.Models;
-using Microsoft.EntityFrameworkCore;
 
 #if !DEBUG
 using Xamarin.Android.AssemblyStore;
@@ -54,15 +50,33 @@ namespace WPR.UI.Android
             ActivityResult resultAct = (result as ActivityResult)!;
             if (resultAct.ResultCode != (int)Result.Ok)
             {
-                var errorText = resultAct.Data?.GetStringExtra(GameActivity.ErrorDataName)
-                    ?? Properties.Resources.ExceptionRunApp;
+                var errorText = resultAct.Data?.GetStringExtra(GameActivity.ErrorDataName);
+                if (string.IsNullOrWhiteSpace(errorText))
+                {
+                    errorText = "The game process exited unexpectedly (native crash or force-close). Check logcat for details.";
+                }
+
                 WPR.Common.Log.Error(LogCategory.AppList, $"Game run error: {errorText}");
+                global::Android.Util.Log.Error("WPR", $"Game run error: {errorText}");
+
+                try
+                {
+                    var logPath = System.IO.Path.Combine(
+                        _Owning.GetExternalFilesDir(null)!.AbsolutePath,
+                        "last_game_error.txt");
+                    System.IO.File.WriteAllText(logPath, errorText);
+                }
+                catch { }
+
+                var dialogMessage = errorText.Length > 3500
+                    ? errorText.Substring(0, 3500) + "\n…(truncated)"
+                    : errorText;
 
                 _Owning.RunOnUiThread(() =>
                 {
                     new AlertDialog.Builder(_Owning)!
                         .SetTitle(Properties.Resources.AppRunError)!
-                        .SetMessage(errorText)!
+                        .SetMessage(dialogMessage)!
                         .SetPositiveButton("OK", (IDialogInterfaceOnClickListener?)null)!
                         .Show();
                 });

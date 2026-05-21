@@ -6,26 +6,31 @@ namespace Microsoft.Xna.Framework.GamerServices
 {
     public class AvatarDescription
     {
+        private static readonly byte[] EmptyDescription = Array.Empty<byte>();
+        private AvatarBodyType _bodyType;
+
         public AvatarDescription(byte[] data)
         {
-            throw new NotImplementedException();
+            _bodyType = AvatarBodyType.Male;
         }
 
         public static AvatarDescription CreateRandom()
         {
-            throw new NotImplementedException();
+            return new AvatarDescription(EmptyDescription);
         }
 
         public static AvatarDescription CreateRandom(AvatarBodyType bodyType)
         {
-            throw new NotImplementedException();
+            var desc = new AvatarDescription(EmptyDescription);
+            desc._bodyType = bodyType;
+            return desc;
         }
 
         public AvatarBodyType BodyType
         {
             get
             {
-                throw new NotImplementedException();
+                return _bodyType;
             }
         }
 
@@ -33,7 +38,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return EmptyDescription;
             }
         }
 
@@ -41,7 +46,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return 1.0f;
             }
         }
 
@@ -49,7 +54,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return true;
             }
         }
 

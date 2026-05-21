@@ -273,7 +273,6 @@ namespace WPR.UI.ViewModels
 
                 Applications =
                     new ObservableCollection<ApplicationItemViewModel>(combined);
-                this.RaisePropertyChanged(nameof(ShowEmptyHint));
 
                 foreach (ApplicationItemViewModel appItem in Applications)
                 {
@@ -290,7 +289,6 @@ namespace WPR.UI.ViewModels
                 Log.Error(LogCategory.AppList,
                     $"Unable to query application database with exception:\n {ex}");
                 Applications = new ObservableCollection<ApplicationItemViewModel>();
-                this.RaisePropertyChanged(nameof(ShowEmptyHint));
             }
         }
 
