@@ -93,7 +93,14 @@ namespace Microsoft.Xna.Framework
 			}
 		}
 
-		private bool INTERNAL_isActive;
+		// Initialised to true so the BeforeLoop `IsActive = true` set is a no-op and
+		// `Activated` does NOT fire on startup. On WP7 the game window is always
+		// active from launch (single-app fullscreen) — `Activated` is only meant
+		// to fire on resume from tombstoned/dormant state, not at first run.
+		// Firing it spuriously on startup crashes games like Asphalt 5 whose
+		// handler looks up state that isn't populated until after their first
+		// Update tick (KeyNotFoundException on a state-machine dictionary).
+		private bool INTERNAL_isActive = true;
 		public bool IsActive
 		{
 			get
@@ -369,6 +376,7 @@ namespace Microsoft.Xna.Framework
 
 		public void Exit()
 		{
+			WprDebugTrace.WriteLine("[wpr-trace] Game.Exit called. Stack: " + new System.Diagnostics.StackTrace(1, false));
 			RunApplication = false;
 			suppressDraw = true;
 		}
@@ -407,21 +415,21 @@ namespace Microsoft.Xna.Framework
 		{
 			AssertNotDisposed();
 
-			Trace.WriteLine("[wpr-trace] Game.Run: enter");
+			WprDebugTrace.WriteLine("[wpr-trace] Game.Run: enter");
 
 			if (!hasInitialized)
 			{
-				Trace.WriteLine("[wpr-trace] Game.Run: DoInitialize starting");
+				WprDebugTrace.WriteLine("[wpr-trace] Game.Run: DoInitialize starting");
 				try
 				{
 					DoInitialize();
 				}
 				catch (Exception ex)
 				{
-					Trace.WriteLine("[wpr-ex] Game.Run - DoInitialize threw: " + ex);
+					WprDebugTrace.WriteLine("[wpr-ex] Game.Run - DoInitialize threw: " + ex);
 					throw;
 				}
-				Trace.WriteLine("[wpr-trace] Game.Run: DoInitialize done");
+				WprDebugTrace.WriteLine("[wpr-trace] Game.Run: DoInitialize done");
 				hasInitialized = true;
 			}
 
@@ -431,7 +439,7 @@ namespace Microsoft.Xna.Framework
 			}
 			catch (Exception ex)
             {
-                Trace.WriteLine("[wpr-ex] Game - BeginRun ex: " + ex);
+                WprDebugTrace.WriteLine("[wpr-ex] Game - BeginRun ex: " + ex);
             }
 
 			try
@@ -440,7 +448,7 @@ namespace Microsoft.Xna.Framework
 			}
 			catch (Exception ex)
 			{
-				Trace.WriteLine("[wpr-ex] Game - BeforeLoop ex: " + ex);
+				WprDebugTrace.WriteLine("[wpr-ex] Game - BeforeLoop ex: " + ex);
 			}
 
 			try
@@ -449,20 +457,20 @@ namespace Microsoft.Xna.Framework
 			}
 			catch (Exception ex)
 			{
-                Trace.WriteLine("[wpr-ex] Game - StartNow ex: " + ex);
+                WprDebugTrace.WriteLine("[wpr-ex] Game - StartNow ex: " + ex);
             }
 
-			Trace.WriteLine("[wpr-trace] Game.Run: entering RunLoop");
+			WprDebugTrace.WriteLine("[wpr-trace] Game.Run: entering RunLoop");
 			try
 			{
 				RunLoop();
 			}
 			catch (Exception ex)
 			{
-                Trace.WriteLine("[wpr-ex] Game - RunLoop ex: " + ex);
+                WprDebugTrace.WriteLine("[wpr-ex] Game - RunLoop ex: " + ex);
 				throw;
             }
-			Trace.WriteLine("[wpr-trace] Game.Run: RunLoop returned");
+			WprDebugTrace.WriteLine("[wpr-trace] Game.Run: RunLoop returned");
 
 			try
 			{
@@ -470,7 +478,7 @@ namespace Microsoft.Xna.Framework
 			}
 			catch (Exception ex)
             {
-                Trace.WriteLine("[wpr-ex] Game - EndRun ex: " + ex);
+                WprDebugTrace.WriteLine("[wpr-ex] Game - EndRun ex: " + ex);
             }
 
 			try
@@ -479,7 +487,7 @@ namespace Microsoft.Xna.Framework
 			}
 			catch (Exception ex)
             {
-                Trace.WriteLine("[wpr-ex] Game - AfterLoop ex: " + ex);
+                WprDebugTrace.WriteLine("[wpr-ex] Game - AfterLoop ex: " + ex);
             }
 		}
 
@@ -496,11 +504,11 @@ namespace Microsoft.Xna.Framework
 			 * modes across multiple devices and platforms.
 			 */
 
-			bool wprTraceThisTick = _wprTraceTickCount < 3;
+			bool wprTraceThisTick = _wprTraceTickCount < 30;
 			int wprTraceIndex = _wprTraceTickCount;
 			if (wprTraceThisTick)
 			{
-				Trace.WriteLine($"[wpr-trace] Game.Tick #{wprTraceIndex} (IsFixedTimeStep={IsFixedTimeStep}, suppressDraw={suppressDraw})");
+				WprDebugTrace.WriteLine($"[wpr-trace] Game.Tick #{wprTraceIndex} (IsFixedTimeStep={IsFixedTimeStep}, suppressDraw={suppressDraw})");
 				_wprTraceTickCount++;
 			}
 
@@ -540,6 +548,25 @@ namespace Microsoft.Xna.Framework
 				ref textInputSuppress
 			);
 
+			// XNA Game Studio 4.0 on Windows Phone 7 auto-called FrameworkDispatcher.Update
+			// once per Game.Update tick. Desktop XNA did NOT, and stock FNA inherited that
+			// behaviour — it only pumps the dispatcher from the Game ctor and EndRun. WP7
+			// games rely on the auto-pump to fire MediaPlayer.ActiveSongChanged /
+			// MediaStateChanged and to drive the TouchPanel update; without it a game that
+			// waits for a "splash song finished" or "intro video ended" callback before
+			// advancing past its loading screen will sit on a blank backbuffer forever
+			// (Asphalt 5 symptom: every frame is just Clear → white → Present with zero
+			// draw primitives, repeating indefinitely). Pump it here so the lifecycle
+			// callbacks the game subscribed to actually fire.
+			try
+			{
+				FrameworkDispatcher.Update();
+			}
+			catch (Exception ex)
+			{
+				WprDebugTrace.WriteLine("[wpr-ex] FrameworkDispatcher.Update threw: " + ex);
+			}
+
 			// Do not allow any update to take longer than our maximum.
 			if (accumulatedElapsedTime > MaxElapsedTime)
 			{
@@ -562,11 +589,19 @@ namespace Microsoft.Xna.Framework
 
 					try
 					{
+						if (wprTraceThisTick)
+						{
+							WprDebugTrace.WriteLine($"[wpr-trace] Game.Update #{wprTraceIndex} (fixed) starting; RunApplication={RunApplication}");
+						}
 						Update(gameTime);
+						if (wprTraceThisTick)
+						{
+							WprDebugTrace.WriteLine($"[wpr-trace] Game.Update #{wprTraceIndex} (fixed) done; RunApplication={RunApplication}");
+						}
 					}
 					catch (Exception ex)
 					{
-						Trace.WriteLine("[wpr-ex] Game.Update (fixed timestep) threw: " + ex);
+						WprDebugTrace.WriteLine("[wpr-ex] Game.Update (fixed timestep) threw: " + ex);
 					}
 				}
 
@@ -633,13 +668,13 @@ namespace Microsoft.Xna.Framework
                 {
                     if (wprTraceThisTick)
                     {
-                        Trace.WriteLine($"[wpr-trace] Game.Update #{wprTraceIndex} starting (elapsed={gameTime.ElapsedGameTime.TotalMilliseconds:F2}ms)");
+                        WprDebugTrace.WriteLine($"[wpr-trace] Game.Update #{wprTraceIndex} starting (elapsed={gameTime.ElapsedGameTime.TotalMilliseconds:F2}ms)");
                     }
                     Update(gameTime);
                 }
                 catch (Exception ex2)
                 {
-                    Trace.WriteLine("[wpr-ex] Game.Update (variable timestep) threw: " + ex2);
+                    WprDebugTrace.WriteLine("[wpr-ex] Game.Update (variable timestep) threw: " + ex2);
 					Exit();
                 }
             }
@@ -662,32 +697,44 @@ namespace Microsoft.Xna.Framework
 				}
 				catch (Exception ex)
 				{
-					Trace.WriteLine("[wpr-ex] Game.BeginDraw threw: " + ex);
+					WprDebugTrace.WriteLine("[wpr-ex] Game.BeginDraw threw: " + ex);
 				}
 				if (wprTraceThisTick)
 				{
-					Trace.WriteLine($"[wpr-trace] Game.Tick #{wprTraceIndex}: BeginDraw -> {beginOk}");
+					WprDebugTrace.WriteLine($"[wpr-trace] Game.Tick #{wprTraceIndex}: BeginDraw -> {beginOk}");
 				}
 				if (beginOk)
 				{
 					try
 					{
+						if (wprTraceThisTick)
+						{
+							WprDebugTrace.WriteLine($"[wpr-trace] Game.Draw #{wprTraceIndex} starting");
+						}
 						Draw(gameTime);
+						if (wprTraceThisTick)
+						{
+							WprDebugTrace.WriteLine($"[wpr-trace] Game.Draw #{wprTraceIndex} done");
+						}
 					}
 					catch (Exception ex)
 					{
-						Trace.WriteLine("[wpr-ex] Game.Draw threw: " + ex);
+						WprDebugTrace.WriteLine("[wpr-ex] Game.Draw threw: " + ex);
 					}
 
 					try
                     {
                         EndDraw();
+                        if (wprTraceThisTick)
+                        {
+                            WprDebugTrace.WriteLine($"[wpr-trace] Game.EndDraw #{wprTraceIndex} done");
+                        }
                     }
                     catch (Exception ex)
                     {
-                        Trace.WriteLine("[wpr-ex] Game.EndDraw threw: " + ex);
+                        WprDebugTrace.WriteLine("[wpr-ex] Game.EndDraw threw: " + ex);
                     }
-					                    
+
                 }
 			}
 		}

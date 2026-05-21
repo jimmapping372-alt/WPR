@@ -135,23 +135,25 @@ moving target — entries are tagged with where they currently sit on the
 ### Current status
 
 
-| Game                 | Status   | Notes                                                                                                                                                                                                          |
-|----------------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 3D Brick Breaker     | Playable | Working <br><img src="Images/3dbb_01.png" width="200"> <img src="Images/3dbb_02.png" width="200">                                                                                                              |
-| Bejeweled Live +     | Playable | Working <br><img src="Images/blp_01.png" width="100"> <img src="Images/blp_02.png" width="100">                                                                                                                |
-| Brain Challenge      | Playable | Working <br><img src="Images/bc_01.png" width="100"> <img src="Images/bc_02.png" width="100">                                                                                                                  |
-| Bug Village          | Playable | Working <br><img src="Images/bv_01.png" width="200"> <img src="Images/bv_02.png" width="200">                                                                                                                  |
-| Castlevania Puzzle   | Partial  | Loads but unable to start arcade or story mode <br><img src="Images/cvp_01.png" width="200">                                                                                                                   |
-| Hydro Thunder GO     | Partial  | Runs but can be slow to initially load. No accelerometer functionality yet (change settings to wheel/throttle in game) <br><img src="Images/htg_01.png" width="200"> <img src="Images/htg_02.png" width="200"> |
-| Zuma's Revenge       | Playable | Working <br><img src="Images/zr-01.png" width="200"> <img src="Images/zr-02.png" width="200">                                                                                                                  |
-| Minesweeper `[SL]`   | Partial  | Help and Options pages now load; bottom app bar z-order fixed. Core gameplay still under verification.                                                                                                         |
-| Penguins Can't Fly   | Broken   | `NullReferenceException` in `Penguin.PenguinGame.get_MenuShowing()` — missing shim/initialisation.                                                                                                             |
-| Acedia: Indie Horror | Broken   | `InvalidOperationException: Sequence contains no elements` during `Activator.CreateInstance`.                                                                                                                  |
-| Asphalt Pogonya      | Broken   | `PlatformNotSupportedException` on `PhoneDirect3DXamlAppInterop.App` (Direct3D XAML hybrid not supported).                                                                                                     |
-| Tentacles            | Broken   | `MissingMethodException: WPR.WindowsCompability.IsolatedStorageSettings2.Contains(String)`.                                                                                                                    |
-| Fruit Ninja          | Broken   | `MissingMethodException: Microsoft.Xna.Framework.GamerServices.GamerProfile.GetGamerPicture()`.                                                                                                                |
-| Dig It               | Broken   | `MissingMethodException: Microsoft.Xna.Framework.GamerServices.LeaderboardReader.get_TotalLeaderboardSize()`.                                                                                                  |
-| Mirror's Edge        | Broken   | Crashes on launch (RE in progress, see commit `c5e988d9`).                                                                                                                                                     |
+| Game                 | Status   | Notes                                                                                                                  |
+|----------------------|----------|------------------------------------------------------------------------------------------------------------------------|
+| 3D Brick Breaker     | Playable | Working                                                                                                                |
+| Asphalt 5            | Partial  | Loads splashscreen but unable to play                                                                                  |
+| Bejeweled Live +     | Playable | Working                                                                                                                |
+| Brain Challenge      | Playable | Working                                                                                                                |
+| Bug Village          | Playable | Working                                                                                                                |
+| Castlevania Puzzle   | Partial  | Loads but unable to start arcade or story mode                                                                         |
+| Final Fantasy        | Playable | Working                                                                                                                |
+| Fruit Ninja          | Playable | Working                                                                                                                |
+| Hydro Thunder GO     | Partial  | Runs but can be slow to initially load. No accelerometer functionality yet (change settings to wheel/throttle in game) |
+| Zuma's Revenge       | Playable | Working                                                                                                                |
+| Minesweeper `[SL]`   | Broken   | Help and Options pages now load; bottom app bar z-order fixed. Core gameplay still under verification.                 |
+| Penguins Can't Fly   | Broken   | `NullReferenceException` in `Penguin.PenguinGame.get_MenuShowing()` — missing shim/initialisation.                     |
+| Acedia: Indie Horror | Broken   | `InvalidOperationException: Sequence contains no elements` during `Activator.CreateInstance`.                          |
+| Asphalt Pogonya      | Broken   | `PlatformNotSupportedException` on `PhoneDirect3DXamlAppInterop.App` (Direct3D XAML hybrid not supported).             |
+| Tentacles            | Broken   | `MissingMethodException: WPR.WindowsCompability.IsolatedStorageSettings2.Contains(String)`.                            |
+| Dig It               | Broken   | `MissingMethodException: Microsoft.Xna.Framework.GamerServices.LeaderboardReader.get_TotalLeaderboardSize()`.          |
+| Mirror's Edge        | Broken   | Crashes on launch (RE in progress, see commit `c5e988d9`).                                                             |
 
 ### Reported by community on legacy WPR (Oct 2023)
 
@@ -186,10 +188,8 @@ historical baseline. Source:
 | Earthworm Jim                         | Partial       | Crashes intermittently                                          |
 | Guitar Hero 5 Mobile                  | Partial       | Crashes before music starts                                     |
 | Ragdoll Run                           | Partial       | Buggy                                                           |
-| Final Fantasy                         | Broken        | Black screen after intro                                        |
 | Star Wars: Battle of the Hoth         | Broken        | Menu cannot select anything                                     |
 | Angry Birds                           | Broken        | Crashes on launch                                               |
-| Asphalt 5                             | Broken        | Crashes at loading screen                                       |
 | BBB: App-ocalypse                     | Broken        | Error screen on load                                            |
 | Crimson Dragon: Side Story            | Broken        | Error screen on load                                            |
 | Plants vs Zombies                     | Broken        | Crashes                                                         |
@@ -252,6 +252,28 @@ A common gotcha — patcher changes do **not** affect already-installed games:
   with a `<game>.dll.original` sibling kept for re-patching.
 
 ## Update History
+### 21/05/2026
+- Fix: Asphalt 5 sat on a blank loading screen — `StartupMode` enum integer
+  values now match the WP7 SDK (`Launch=1`, `Activate=2`), and FNA's
+  `Game.IsActive` no longer fires a spurious `Activated` event at first frame
+- Fix: Tentacles crashed at exit on a null `ApplicationCurrentMemoryUsage` —
+  `Microsoft.Phone.Info.DeviceExtendedProperties` now returns the WP7 memory
+  counters (`ApplicationCurrentMemoryUsage`, `ApplicationPeakMemoryUsage`,
+  `ApplicationMemoryUsageLimit`)
+- Fix: XNA games that wait on `MediaPlayer` / song-finished callbacks before
+  advancing past their splash now progress — `Game.Tick` auto-pumps
+  `FrameworkDispatcher.Update()` once per update, matching WP7 XNA 4.0 behaviour
+- Feat: Per-game `wpr_game_debug.log` and the in-engine `[wpr-trace]` output
+  are now `#if DEBUG`-gated via `WprDebugTrace` — Release builds elide the
+  trace formatting and file listener entirely (no log spam, no per-frame cost)
+- Feat: Richer assembly-resolver diagnostics in `ApplicationLaunch` —
+  `Resolving` failures log the underlying exception type, HResult and inner
+  exception instead of the opaque "Operation is not supported" surface error
+- Compat: Asphalt 5 promoted from Broken → Partial (loads splash, gameplay TBD)
+- Compat: Final Fantasy promoted to Playable
+- Compat: Fruit Ninja confirmed Playable (no longer blocked on
+  `GamerProfile.GetGamerPicture`)
+
 ### 17/05/2026
 - Fix: Small bug on second launch of XNA games, where resources arent released fully
 - Feat: Added Windows based notifications

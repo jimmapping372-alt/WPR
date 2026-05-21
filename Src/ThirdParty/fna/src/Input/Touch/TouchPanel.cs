@@ -152,6 +152,11 @@ namespace Microsoft.Xna.Framework.Input.Touch
 			gestures.Enqueue(gesture);
 		}
 
+		// Counts the first 30 touch events so we can confirm clicks/taps reach FNA at
+		// all. Press events are loudest signal; if we never see a Pressed log here a
+		// click in the host window isn't being translated to a touch.
+		private static int _wprTouchTraceCount;
+
 		internal static void INTERNAL_onTouchEvent(
 			int fingerId,
 			TouchLocationState state,
@@ -166,6 +171,12 @@ namespace Microsoft.Xna.Framework.Input.Touch
 				(float) Math.Round(x * DisplayWidth),
 				(float) Math.Round(y * DisplayHeight)
 			);
+
+			if (_wprTouchTraceCount < 30 && state != TouchLocationState.Moved)
+			{
+				_wprTouchTraceCount++;
+				WprDebugTrace.WriteLine($"[wpr-trace] TouchPanel.INTERNAL_onTouchEvent #{_wprTouchTraceCount}: finger={fingerId} state={state} pos=({touchPos.X:F1},{touchPos.Y:F1}) display={DisplayWidth}x{DisplayHeight} mouseAsTouch={_MouseAsTouch} deviceExists={TouchDeviceExists}");
+			}
 
 			// Notify the Gesture Detector about the event
 			switch (state)
@@ -202,8 +213,17 @@ namespace Microsoft.Xna.Framework.Input.Touch
 			}
 		}
 
+		private static int _wprSetFingerTraceCount;
 		internal static void SetFinger(int index, int fingerId, Vector2 fingerPos)
 		{
+			// Trace the first N SetFinger calls — confirms the touches[] array gets
+			// updated by the mouse-as-touch poll path. Without entries here, GetState()
+			// returns empty even if the user is clicking.
+			if (_wprSetFingerTraceCount < 30 && (fingerId != NO_FINGER || prevTouches[index].State == TouchLocationState.Pressed || prevTouches[index].State == TouchLocationState.Moved))
+			{
+				_wprSetFingerTraceCount++;
+				WprDebugTrace.WriteLine($"[wpr-trace] TouchPanel.SetFinger #{_wprSetFingerTraceCount}: idx={index} finger={fingerId} pos=({fingerPos.X:F1},{fingerPos.Y:F1}) prevState={prevTouches[index].State}");
+			}
 			if (fingerId == NO_FINGER)
 			{
 				// Was there a finger here before and the user just released it?

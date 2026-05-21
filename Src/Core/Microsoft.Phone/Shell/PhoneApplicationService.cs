@@ -23,8 +23,10 @@ namespace Microsoft.Phone.Shell
 
         public void HandleApplicationStart(bool anew)
         {
+#if DEBUG
             Trace.WriteLine($"[wpr-trace] PhoneApplicationService.HandleApplicationStart(anew={anew}) firing Launching+Activated. " +
                 $"Subscribers: Launching={CountInvocations(_Launching)} Activated={CountInvocations(_Activated)}");
+#endif
 
             // WP7 fires Launching on a fresh launch (anew=true) and Activated on resume
             // (anew=false, IsApplicationInstancePreserved=true). We previously fired only
@@ -34,11 +36,25 @@ namespace Microsoft.Phone.Shell
             if (anew)
             {
                 try { _Launching?.Invoke(this, new LaunchingEventArgs()); }
-                catch (Exception ex) { Trace.WriteLine("[wpr-ex] PhoneApplicationService.Launching handler threw: " + ex); }
+                catch (Exception ex)
+                {
+#if DEBUG
+                    Trace.WriteLine("[wpr-ex] PhoneApplicationService.Launching handler threw: " + ex);
+#else
+                    _ = ex;
+#endif
+                }
             }
 
             try { _Activated?.Invoke(this, new ActivatedEventArgs(!anew)); }
-            catch (Exception ex) { Trace.WriteLine("[wpr-ex] PhoneApplicationService.Activated handler threw: " + ex); }
+            catch (Exception ex)
+            {
+#if DEBUG
+                Trace.WriteLine("[wpr-ex] PhoneApplicationService.Activated handler threw: " + ex);
+#else
+                _ = ex;
+#endif
+            }
 
             _AppActivated = true;
         }
@@ -60,7 +76,9 @@ namespace Microsoft.Phone.Shell
         {
             add
             {
+#if DEBUG
                 Trace.WriteLine($"[wpr-trace] PhoneApplicationService.Activated += handler (_AppActivated={_AppActivated})");
+#endif
                 if (_AppActivated)
                 {
                     value?.Invoke(this, new ActivatedEventArgs(false));
@@ -82,7 +100,9 @@ namespace Microsoft.Phone.Shell
         {
             add
             {
+#if DEBUG
                 Trace.WriteLine($"[wpr-trace] PhoneApplicationService.Launching += handler");
+#endif
                 _Launching += value;
             }
             remove { _Launching -= value; }

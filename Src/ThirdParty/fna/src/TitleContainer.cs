@@ -30,6 +30,11 @@ namespace Microsoft.Xna.Framework
 	{
 		#region Public Static Methods
 
+		// Per-call open log, gated by DEBUG via WprDebugTrace so Release builds elide the
+		// formatting & dispatch entirely. Cap raised to 2000 (most games load a few hundred
+		// asset files during init; capping too low hides which file the loader stalls on).
+		private static int _wprOpenTraceCount;
+
 		public static Stream OpenStream(string name)
 		{
 			string safeName = MonoGame.Utilities.FileHelpers.NormalizeFilePathSeparators(name);
@@ -41,17 +46,33 @@ namespace Microsoft.Xna.Framework
 			}
 			safeName = GetCaseName(Path.Combine(TitleLocation.Path, safeName));
 #endif
+			bool wprTrace = _wprOpenTraceCount < 2000;
+			if (wprTrace)
+			{
+				_wprOpenTraceCount++;
+				WprDebugTrace.WriteLine($"[wpr-trace] TitleContainer.OpenStream #{_wprOpenTraceCount}: name=\"{name}\" safeName=\"{safeName}\" rooted={Path.IsPathRooted(safeName)} titleLoc=\"{TitleLocation.Path}\"");
+			}
 			if (Path.IsPathRooted(safeName))
 			{
-				return File.OpenRead(safeName);
+				try
+				{
+					return File.OpenRead(safeName);
+				}
+				catch (Exception ex)
+				{
+					WprDebugTrace.WriteLine($"[wpr-ex] TitleContainer.OpenStream rooted path threw for \"{safeName}\": {ex.GetType().Name}: {ex.Message}");
+					throw;
+				}
 			}
 
+			string full = Path.Combine(TitleLocation.Path, safeName);
 			try
 			{
-				return File.OpenRead(Path.Combine(TitleLocation.Path, safeName));
+				return File.OpenRead(full);
 			}
 			catch (Exception ex)
 			{
+				WprDebugTrace.WriteLine($"[wpr-ex] TitleContainer.OpenStream FAILED full=\"{full}\": {ex.GetType().Name}: {ex.Message}");
 				Debug.WriteLine("[ex] Exception : " + ex.Message);
 			}
 			return default;

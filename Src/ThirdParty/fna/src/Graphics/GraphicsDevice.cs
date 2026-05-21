@@ -550,8 +550,19 @@ namespace Microsoft.Xna.Framework.Graphics
 
 		#region Public Present Method
 
+		private static int _wprPresentTraceCount;
 		public void Present()
 		{
+			if (_wprPresentTraceCount < 10)
+			{
+				_wprPresentTraceCount++;
+				WprDebugTrace.WriteLine($"[wpr-trace] GraphicsDevice.Present #{_wprPresentTraceCount} window=0x{PresentationParameters.DeviceWindowHandle.ToInt64():X} bb={PresentationParameters.BackBufferWidth}x{PresentationParameters.BackBufferHeight} drawCallsThisFrame={_wprDrawCallsThisFrame}");
+				_wprDrawCallsThisFrame = 0;
+			}
+			else
+			{
+				_wprDrawCallsThisFrame = 0;
+			}
 			FNA3D.FNA3D_SwapBuffers(
 				GLDevice,
 				IntPtr.Zero,
@@ -730,17 +741,34 @@ namespace Microsoft.Xna.Framework.Graphics
 			);
 		}
 
-		// Counts the first few Clear() calls so the WPR debug log can show whether the game
-		// even reaches the device-clear stage of its Draw(). Static so it spans all device
-		// instances and doesn't require allocating per-game state.
+		// Counts Clear() calls and logs only when the clear colour changes — that way we
+		// can see the game's actual frame transitions (e.g. purple splash → white loader
+		// → black scene) without flooding the log with per-frame repeats. Static so it
+		// spans all device instances and doesn't require allocating per-game state.
 		private static int _wprClearTraceCount;
+		private static Vector4 _wprLastClearColor = new Vector4(float.NaN, 0, 0, 0);
+		private static int _wprSameColorRun;
 
 		public void Clear(ClearOptions options, Vector4 color, float depth, int stencil)
 		{
-			if (_wprClearTraceCount < 3)
+			_wprClearTraceCount++;
+			bool colorChanged = color.X != _wprLastClearColor.X
+				|| color.Y != _wprLastClearColor.Y
+				|| color.Z != _wprLastClearColor.Z
+				|| color.W != _wprLastClearColor.W;
+			if (colorChanged)
 			{
-				_wprClearTraceCount++;
-				Trace.WriteLine($"[wpr-trace] GraphicsDevice.Clear #{_wprClearTraceCount}: options={options} color=({color.X:F2},{color.Y:F2},{color.Z:F2},{color.W:F2})");
+				if (_wprSameColorRun > 0)
+				{
+					WprDebugTrace.WriteLine($"[wpr-trace] GraphicsDevice.Clear (prev color repeated {_wprSameColorRun}x)");
+				}
+				WprDebugTrace.WriteLine($"[wpr-trace] GraphicsDevice.Clear #{_wprClearTraceCount}: options={options} color=({color.X:F2},{color.Y:F2},{color.Z:F2},{color.W:F2})");
+				_wprLastClearColor = color;
+				_wprSameColorRun = 0;
+			}
+			else
+			{
+				_wprSameColorRun++;
 			}
 			DepthFormat dsFormat;
 			if (renderTargetCount == 0)
@@ -1139,6 +1167,21 @@ namespace Microsoft.Xna.Framework.Graphics
 		/// <param name="primitiveCount">
 		/// The number of primitives to render from the index buffer.
 		/// </param>
+		// Per-frame draw-call counter. Reset every Present so each frame's draw count
+		// can be logged. Lets us see whether the game's loading screen is doing any
+		// drawing past its clears or just sitting on a blank backbuffer.
+		private static int _wprDrawCallsThisFrame;
+		private static int _wprDrawCallTotalLogged;
+		private static void WprTraceDraw(string kind, int primitiveCount)
+		{
+			_wprDrawCallsThisFrame++;
+			if (_wprDrawCallTotalLogged < 30)
+			{
+				_wprDrawCallTotalLogged++;
+				WprDebugTrace.WriteLine($"[wpr-trace] GraphicsDevice.{kind} prims={primitiveCount}");
+			}
+		}
+
 		public void DrawIndexedPrimitives(
 			PrimitiveType primitiveType,
 			int baseVertex,
@@ -1147,6 +1190,7 @@ namespace Microsoft.Xna.Framework.Graphics
 			int startIndex,
 			int primitiveCount
 		) {
+			WprTraceDraw("DrawIndexedPrimitives", primitiveCount);
 			ApplyState();
 
 			PrepareVertexBindingArray(baseVertex);
@@ -1206,6 +1250,7 @@ namespace Microsoft.Xna.Framework.Graphics
 			int vertexStart,
 			int primitiveCount
 		) {
+			WprTraceDraw("DrawPrimitives", primitiveCount);
 			ApplyState();
 
 			PrepareVertexBindingArray(0);
@@ -1231,6 +1276,7 @@ namespace Microsoft.Xna.Framework.Graphics
 			int indexOffset,
 			int primitiveCount
 		) where T : struct, IVertexType {
+			WprTraceDraw("DrawUserIndexedPrimitives<T,short>", primitiveCount);
 			ApplyState();
 
 			// Pin the buffers.
@@ -1277,6 +1323,7 @@ namespace Microsoft.Xna.Framework.Graphics
 			int primitiveCount,
 			VertexDeclaration vertexDeclaration
 		) where T : struct {
+			WprTraceDraw("DrawUserIndexedPrimitives<T,short,VD>", primitiveCount);
 			ApplyState();
 
 			// Pin the buffers.
@@ -1322,6 +1369,7 @@ namespace Microsoft.Xna.Framework.Graphics
 			int indexOffset,
 			int primitiveCount
 		) where T : struct, IVertexType {
+			WprTraceDraw("DrawUserIndexedPrimitives<T,int>", primitiveCount);
 			ApplyState();
 
 			// Pin the buffers.
@@ -1368,6 +1416,7 @@ namespace Microsoft.Xna.Framework.Graphics
 			int primitiveCount,
 			VertexDeclaration vertexDeclaration
 		) where T : struct {
+			WprTraceDraw("DrawUserIndexedPrimitives<T,int,VD>", primitiveCount);
 			ApplyState();
 
 			// Pin the buffers.
@@ -1414,6 +1463,7 @@ namespace Microsoft.Xna.Framework.Graphics
 			int vertexOffset,
 			int primitiveCount
 		) where T : struct, IVertexType {
+			WprTraceDraw("DrawUserPrimitives<T>", primitiveCount);
 			ApplyState();
 
 			// Pin the buffers.
@@ -1444,6 +1494,7 @@ namespace Microsoft.Xna.Framework.Graphics
 			int primitiveCount,
 			VertexDeclaration vertexDeclaration
 		) where T : struct {
+			WprTraceDraw("DrawUserPrimitives<T,VD>", primitiveCount);
 			ApplyState();
 
 			// Pin the buffers.

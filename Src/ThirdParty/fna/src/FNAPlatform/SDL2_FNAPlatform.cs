@@ -1126,11 +1126,17 @@ namespace Microsoft.Xna.Framework
 					);
 				}
 
+				// SDL_MOUSEBUTTON{DOWN,UP} are also handled below (above? — search MOUSEBUTTONDOWN
+				// in this file). The mouse-as-touch path is polled in UpdateTouchPanelState
+				// every TouchPanel.Update tick; the SDL_MOUSEBUTTON handlers feed
+				// INTERNAL_onTouchEvent for the GestureDetector only.
+
 				// Various Window Events...
 				else if ((evt.type == SDL.SDL_EventType.SDL_WINDOWEVENT) && (SDL.SDL_GetWindowID(game.Window.Handle) == evt.window.windowID))
 				{
 					if (evt.window.windowEvent == SDL.SDL_WindowEventID.SDL_WINDOWEVENT_CLOSE)
 					{
+						WprDebugTrace.WriteLine("[wpr-trace] SDL_WINDOWEVENT_CLOSE -> RunApplication=false");
 						game.RunApplication = false;
 					} else
 					// Window Focus
@@ -1318,6 +1324,7 @@ namespace Microsoft.Xna.Framework
 				// Quit
 				else if (evt.type == SDL.SDL_EventType.SDL_QUIT)
 				{
+					WprDebugTrace.WriteLine("[wpr-trace] SDL_QUIT -> RunApplication=false");
 					game.RunApplication = false;
 					break;
 				}
@@ -2435,12 +2442,24 @@ namespace Microsoft.Xna.Framework
 			);
 		}
 
+		private static bool _wprLastMouseAsTouchPressed;
+		private static int _wprMouseAsTouchTraceCount;
 		public static unsafe void UpdateTouchPanelState()
 		{
 			if (TouchPanel.MouseAsTouch)
 			{
 				uint flags = SDL.SDL_GetMouseState(out int x, out int y);
 				bool nowPressed = ((ButtonState)(flags & SDL.SDL_BUTTON_LMASK) == ButtonState.Pressed);
+
+				// Edge-triggered trace so we see exactly when the mouse-as-touch poll
+				// transitions between pressed/not-pressed — the moments that flip
+				// touches[0].State between Pressed/Released/Invalid.
+				if (nowPressed != _wprLastMouseAsTouchPressed && _wprMouseAsTouchTraceCount < 30)
+				{
+					_wprMouseAsTouchTraceCount++;
+					WprDebugTrace.WriteLine($"[wpr-trace] UpdateTouchPanelState mouse poll #{_wprMouseAsTouchTraceCount}: nowPressed={nowPressed} pos=({x},{y})");
+					_wprLastMouseAsTouchPressed = nowPressed;
+				}
 
 				if (nowPressed)
 				{

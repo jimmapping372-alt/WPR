@@ -334,7 +334,7 @@ namespace Microsoft.Xna.Framework.Graphics
 			if (_wprEndTraceCount < 5)
 			{
 				_wprEndTraceCount++;
-				Trace.WriteLine($"[wpr-trace] SpriteBatch.End #{_wprEndTraceCount}: sprites={_wprBatchItemSnapshot} sortMode={sortMode}");
+				WprDebugTrace.WriteLine($"[wpr-trace] SpriteBatch.End #{_wprEndTraceCount}: sprites={_wprBatchItemSnapshot} sortMode={sortMode}");
 			}
 		}
 

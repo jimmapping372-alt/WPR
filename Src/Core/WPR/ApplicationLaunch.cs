@@ -19,6 +19,15 @@ namespace WPR
     public static class ApplicationLaunch
     {
         /// <summary>
+        /// <c>[Conditional("DEBUG")]</c> wrapper around <see cref="Trace.WriteLine(string)"/>.
+        /// In Release builds the C# compiler elides every call site (including argument
+        /// expressions), so an interpolated string like <c>WprTrace($"x={x}")</c> costs
+        /// nothing at all — no string allocation, no listener dispatch.
+        /// </summary>
+        [System.Diagnostics.Conditional("DEBUG")]
+        private static void WprTrace(string msg) => Trace.WriteLine(msg);
+
+        /// <summary>
         /// The game currently being driven by <see cref="Start"/>, or null if no game is running.
         /// Used by the host so it can request a clean shutdown when the main window closes.
         /// </summary>
@@ -70,7 +79,11 @@ namespace WPR
                 string candidate = Path.Combine(CurrentProductFolder, name.Name + ".dll");
                 if (!File.Exists(candidate)) return null;
                 try { return userAlc.LoadFromAssemblyPath(candidate); }
-                catch { return null; }
+                catch (Exception ex)
+                {
+                    WprTrace($"[wpr-resolve-default] FAIL {name.FullName} via {candidate}: {ex.GetType().FullName} hr=0x{ex.HResult:X8} msg=\"{ex.Message}\"");
+                    return null;
+                }
             };
         }
 
@@ -108,7 +121,13 @@ namespace WPR
             // Game.Tick swallows (Update/Draw/EndDraw catches that only Debug.WriteLine the
             // failure). Without this, a game whose Draw throws every frame appears as a silent
             // black screen with no diagnostic file (since Run() itself doesn't throw).
+            //
+            // Gated on DEBUG so end users on Release builds don't get a 300 KB-per-launch log
+            // file (and don't pay for the per-frame Trace traffic that fills it). To debug a
+            // game locally, build the solution in Debug — the per-game wpr_game_debug.log will
+            // reappear next to the install directory.
             TextWriterTraceListener? debugListener = null;
+#if DEBUG
             try
             {
                 string debugLogPath = Path.Combine(folderPath, "wpr_game_debug.log");
@@ -120,12 +139,13 @@ namespace WPR
                 sw.WriteLine();
                 debugListener = new TextWriterTraceListener(sw, "wpr_game_debug");
                 Trace.Listeners.Add(debugListener);
-                Trace.WriteLine("[wpr-trace] ApplicationLaunch: trace listener attached (smoke test)");
+                WprTrace("[wpr-trace] ApplicationLaunch: trace listener attached (smoke test)");
             }
             catch (Exception ex)
             {
                 Log.Warn(LogCategory.AppList, $"Could not attach debug log listener: {ex.Message}");
             }
+#endif
 
             // Use a collectible ALC so closing the game can unload the user assembly — otherwise
             // the .dll stays locked on disk for the life of WPR (blocking re-install) and any
@@ -137,16 +157,40 @@ namespace WPR
             alc.Resolving += (ctx, name) =>
             {
                 string candidate = Path.Combine(folderPath, name.Name + ".dll");
-                if (File.Exists(candidate)) return ctx.LoadFromAssemblyPath(candidate);
+                if (File.Exists(candidate))
+                {
+                    try
+                    {
+                        var loaded = ctx.LoadFromAssemblyPath(candidate);
+                        WprTrace($"[wpr-resolve-user] OK   {name.FullName} -> {candidate} -> {loaded.FullName}");
+                        return loaded;
+                    }
+                    catch (Exception ex)
+                    {
+                        // The runtime will re-raise FileLoadException for this name after we
+                        // return null / let it propagate; log the actual underlying failure
+                        // here so we can see HResult and exception type that the surface error
+                        // hides ("Operation is not supported (0x80131515)" being the typical
+                        // opaque case).
+                        WprTrace($"[wpr-resolve-user] FAIL {name.FullName} via {candidate}: {ex.GetType().FullName} hr=0x{ex.HResult:X8} msg=\"{ex.Message}\"");
+                        if (ex.InnerException != null)
+                            WprTrace($"[wpr-resolve-user] FAIL inner: {ex.InnerException.GetType().FullName}: {ex.InnerException.Message}");
+                        WprTrace($"[wpr-resolve-user] FAIL stack: {ex.StackTrace}");
+                        throw;
+                    }
+                }
 
                 // Fall back to name-only load — handles WinMD-projected refs like
                 // `mscorlib v=255.255.255.255` that the strict version binder rejects.
                 try
                 {
-                    return AssemblyLoadContext.Default.LoadFromAssemblyName(new AssemblyName(name.Name!));
+                    var loaded = AssemblyLoadContext.Default.LoadFromAssemblyName(new AssemblyName(name.Name!));
+                    WprTrace($"[wpr-resolve-user] DEF  {name.FullName} -> {loaded.FullName}");
+                    return loaded;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    WprTrace($"[wpr-resolve-user] MISS {name.FullName}: {ex.GetType().FullName} hr=0x{ex.HResult:X8} msg=\"{ex.Message}\"");
                     return null;
                 }
             };
@@ -213,10 +257,10 @@ namespace WPR
                     GraphicsDeviceManager2.RequestOrientation = requestOrientation;
                     SignedInGamer.Reset();
 
-                    Trace.WriteLine("[wpr-trace] ApplicationLaunch: subscribing to obj.Activated");
+                    WprTrace("[wpr-trace] ApplicationLaunch: subscribing to obj.Activated");
                     obj.Activated += (obj, args) =>
                     {
-                        Trace.WriteLine("[wpr-trace] ApplicationLaunch: obj.Activated fired -> HandleApplicationStart(true)");
+                        WprTrace("[wpr-trace] ApplicationLaunch: obj.Activated fired -> HandleApplicationStart(true)");
                         PhoneApplicationService.Current!.HandleApplicationStart(true);
                     };
 
@@ -227,14 +271,14 @@ namespace WPR
                     // the game then sits on a "not initialised" black screen because its
                     // Application_Launching handler is where it builds its scene graph.
                     // Fire the lifecycle once, unconditionally, right at startup as a safety net.
-                    Trace.WriteLine("[wpr-trace] ApplicationLaunch: priming PhoneApplicationService.HandleApplicationStart(true) before Game.Run");
+                    WprTrace("[wpr-trace] ApplicationLaunch: priming PhoneApplicationService.HandleApplicationStart(true) before Game.Run");
                     try
                     {
                         PhoneApplicationService.Current!.HandleApplicationStart(true);
                     }
                     catch (Exception ex)
                     {
-                        Trace.WriteLine("[wpr-ex] HandleApplicationStart priming threw: " + ex);
+                        WprTrace("[wpr-ex] HandleApplicationStart priming threw: " + ex);
                     }
 
                     GraphicsDeviceManager? manager = obj.Services.GetService(typeof(IGraphicsDeviceManager)) as GraphicsDeviceManager;
@@ -251,12 +295,12 @@ namespace WPR
 
                     try
                     {
-                        Trace.WriteLine("[wpr-trace] ApplicationLaunch: about to call Game.Run()");
+                        WprTrace("[wpr-trace] ApplicationLaunch: about to call Game.Run()");
                         // Run the game and capture any exceptions to produce richer diagnostics.
                         try
                         {
                             obj.Run();
-                            Trace.WriteLine("[wpr-trace] ApplicationLaunch: Game.Run() returned normally");
+                            WprTrace("[wpr-trace] ApplicationLaunch: Game.Run() returned normally");
                         }
                         catch (Exception ex)
                         {

@@ -34,24 +34,42 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             add
             {
+#if DEBUG
+                Trace.WriteLine($"[wpr-trace] SignedInGamer.SignedIn += handler (FirstSignInSessionDone={FirstSignInSessionDone}, value={(value == null ? "null" : "set")})");
+#endif
                 if (value != null)
                 {
                     if (FirstSignInSessionDone)
                     {
+#if DEBUG
+                        Trace.WriteLine("[wpr-trace] SignedInGamer.SignedIn: firing immediately (already signed in)");
+#endif
                         value.Invoke(null, new SignedInEventArgs(_SignedInGamers[0]));
                     } else
                     {
+#if DEBUG
+                        Trace.WriteLine($"[wpr-trace] SignedInGamer.SignedIn: scheduling Task.Delay({DelaySignedInMillis}ms) → invoke");
+#endif
                         Task.Delay(DelaySignedInMillis).ContinueWith(previous =>
                         {
+#if DEBUG
+                            Trace.WriteLine("[wpr-trace] SignedInGamer.SignedIn: Task.Delay completed, firing handler");
+#endif
                             FirstSignInSessionDone = true;
 
                             //TODO: handle multiple signed in gamers
                             try
                             {
                                 value.Invoke(null, new SignedInEventArgs(_SignedInGamers[0]));
+#if DEBUG
+                                Trace.WriteLine("[wpr-trace] SignedInGamer.SignedIn: handler returned normally");
+#endif
                             }
                             catch (Exception ex)
                             {
+#if DEBUG
+                                Trace.WriteLine("[wpr-ex] SignedInGamer.SignedIn handler threw: " + ex);
+#endif
                                 Debug.WriteLine("[ex] SignedInGamer exception: " + ex.Message);
                             }
                         });
