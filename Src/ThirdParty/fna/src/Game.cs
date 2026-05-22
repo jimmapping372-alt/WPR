@@ -94,12 +94,16 @@ namespace Microsoft.Xna.Framework
 		}
 
 		// Initialised to true so the BeforeLoop `IsActive = true` set is a no-op and
-		// `Activated` does NOT fire on startup. On WP7 the game window is always
-		// active from launch (single-app fullscreen) — `Activated` is only meant
-		// to fire on resume from tombstoned/dormant state, not at first run.
-		// Firing it spuriously on startup crashes games like Asphalt 5 whose
-		// handler looks up state that isn't populated until after their first
-		// Update tick (KeyNotFoundException on a state-machine dictionary).
+		// the IsActive setter does NOT raise `Activated` during startup. On WP7 the
+		// game window is always active from launch (single-app fullscreen), so
+		// IsActive being `true` from the very first frame is correct. Firing the
+		// `Activated` event itself too early — before the first Update tick — crashes
+		// games like Asphalt 5 whose handler looks up state that isn't populated until
+		// after their first Update tick (KeyNotFoundException on a state-machine
+		// dictionary). The initial `Activated` fire is therefore deferred to the end
+		// of the first `Tick` (see `_wprInitialActivatedFired` below). Subsequent
+		// background/foreground transitions are handled by the SDL FOCUS_LOST/GAINED
+		// branches in `SDL2_FNAPlatform.PollEvents`.
 		private bool INTERNAL_isActive = true;
 		public bool IsActive
 		{
@@ -496,6 +500,217 @@ namespace Microsoft.Xna.Framework
 		// flooding the debug log.
 		private int _wprTraceTickCount;
 
+		// Always increments — used by the heartbeat probe (which keeps firing at intervals
+		// well past the per-tick trace cap above).
+		private long _wprTicksTotal;
+
+		// Reflection probes for the loading-state heartbeat. Cached after first lookup so
+		// the per-tick cost is just a field read; null until the user assembly has loaded
+		// (which is always by the time Tick fires, but the type discovery is deferred
+		// because the user-ALC's types aren't visible from this assembly at static-init).
+		private bool _wprHeartbeatTypesScanned;
+		private System.Reflection.FieldInfo _wprAppLoadingProgressField;
+		private System.Reflection.FieldInfo _wprAppIsLoadingField;
+		private System.Reflection.FieldInfo _wprAppSceneToLoadField;
+		private System.Reflection.FieldInfo _wprAppLoadIsCompleteField;
+		private System.Reflection.FieldInfo _wprAppHasDrawBeenCalledField;
+		private System.Reflection.FieldInfo _wprAppLoadedLevelNameField;     // PressPlay.FFWD.Application._loadedLevelName
+		private System.Reflection.FieldInfo _wprPreloaderStateField;
+		private Type _wprScreenManagerType;
+		private System.Reflection.FieldInfo _wprScreenManagerStaticField;     // Application.screenManager
+		private System.Reflection.FieldInfo _wprScreensListField;             // ScreenManager.screens
+		// Tentacles-specific: LevelHandler.isLoaded gates LemmyTravelScreen.HandleInput; if it
+		// stays false, no input → user can never tap to start the level (transition screen hangs).
+		private Type _wprLevelHandlerType;
+		private System.Reflection.FieldInfo _wprLevelHandlerIsLoadedField;    // static
+		private System.Reflection.PropertyInfo _wprLevelHandlerInstanceProp;  // get_Instance
+		private System.Reflection.FieldInfo _wprLevelHandlerStateField;
+		private System.Reflection.FieldInfo _wprLevelHandlerCurrentLevelField;
+		private object _wprPreloaderInstance;
+		private long _wprLastHeartbeatTick = -1;
+
+		// Periodic (~once / 2s) dump of FFWD's loading-state. Best-effort, swallows all
+		// reflection failures — heartbeat is purely diagnostic and must not affect game
+		// behaviour. Emits only for FFWD-based titles (Tentacles etc.); other XNA games
+		// won't have these types so the heartbeat silently becomes a no-op.
+		[Conditional("DEBUG")]
+		private void WprEmitGameStateHeartbeat()
+		{
+			_wprTicksTotal++;
+			// Tick #30 onwards we run this; before that, the verbose per-tick trace covers it.
+			if (_wprTicksTotal < 30) return;
+			// Emit at ~2-second intervals (60 ticks @ 30fps) — bucket flips when we cross a boundary.
+			long bucket = _wprTicksTotal / 60;
+			if (bucket == _wprLastHeartbeatTick) return;
+			_wprLastHeartbeatTick = bucket;
+
+			try
+			{
+				if (!_wprHeartbeatTypesScanned)
+				{
+					_wprHeartbeatTypesScanned = true;
+					Type appType = null;
+					Type preloaderType = null;
+					Type levelHandlerType = null;
+					Type screenManagerType = null;
+					foreach (System.Reflection.Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
+					{
+						try
+						{
+							if (appType == null) appType = asm.GetType("PressPlay.FFWD.Application", false);
+							if (preloaderType == null) preloaderType = asm.GetType("PressPlay.Tentacles.Scripts.PreloaderScreen", false);
+							if (levelHandlerType == null) levelHandlerType = asm.GetType("PressPlay.Tentacles.Scripts.LevelHandler", false);
+							if (screenManagerType == null) screenManagerType = asm.GetType("PressPlay.FFWD.ScreenManager.ScreenManager", false);
+						}
+						catch { /* asm may be a dynamic / reflection-only context */ }
+						if (appType != null && preloaderType != null && levelHandlerType != null && screenManagerType != null) break;
+					}
+					const System.Reflection.BindingFlags bf =
+						System.Reflection.BindingFlags.Static
+						| System.Reflection.BindingFlags.Instance
+						| System.Reflection.BindingFlags.Public
+						| System.Reflection.BindingFlags.NonPublic;
+					if (appType != null)
+					{
+						_wprAppLoadingProgressField = appType.GetField("_loadingProgess", bf);
+						_wprAppIsLoadingField = appType.GetField("isLoadingAssetBeforeSceneInitialize", bf);
+						_wprAppSceneToLoadField = appType.GetField("sceneToLoad", bf);
+						_wprAppLoadIsCompleteField = appType.GetField("loadIsComplete", bf);
+						_wprAppHasDrawBeenCalledField = appType.GetField("hasDrawBeenCalled", bf);
+						_wprAppLoadedLevelNameField = appType.GetField("_loadedLevelName", bf);
+						_wprScreenManagerStaticField = appType.GetField("screenManager", bf);
+					}
+					if (preloaderType != null)
+					{
+						_wprPreloaderStateField = preloaderType.GetField("_state", bf);
+					}
+					if (screenManagerType != null)
+					{
+						_wprScreenManagerType = screenManagerType;
+						_wprScreensListField = screenManagerType.GetField("screens", bf);
+					}
+					if (levelHandlerType != null)
+					{
+						_wprLevelHandlerType = levelHandlerType;
+						_wprLevelHandlerIsLoadedField = levelHandlerType.GetField("isLoaded", bf);
+						_wprLevelHandlerInstanceProp = levelHandlerType.GetProperty("Instance", bf);
+						_wprLevelHandlerStateField = levelHandlerType.GetField("_state", bf);
+						_wprLevelHandlerCurrentLevelField = levelHandlerType.GetField("_currentLevel", bf);
+					}
+				}
+
+				if (_wprAppLoadingProgressField == null) return;
+
+				object loadingProgress = _wprAppLoadingProgressField.GetValue(null);
+				object isLoading = _wprAppIsLoadingField?.GetValue(null);
+				object sceneToLoad = _wprAppSceneToLoadField?.GetValue(null);
+				object loadIsComplete = _wprAppLoadIsCompleteField?.GetValue(null);
+				object hasDrawBeenCalled = _wprAppHasDrawBeenCalledField?.GetValue(null);
+				object loadedLevelName = _wprAppLoadedLevelNameField?.GetValue(null);
+
+				// Walk the screen manager's screens list each heartbeat so we know which
+				// screen is currently active AND we can re-probe a fresh PreloaderScreen /
+				// LoadingScreen2 each time (instances cycle as the user moves through menus).
+				string topScreens = "<no SM>";
+				object preloaderInstance = null;
+				object loadingScreen2Instance = null;
+				if (_wprScreenManagerStaticField != null && _wprScreensListField != null)
+				{
+					try
+					{
+						object sm = _wprScreenManagerStaticField.GetValue(null);
+						if (sm != null && _wprScreensListField.GetValue(sm) is System.Collections.IEnumerable screens)
+						{
+							var names = new System.Collections.Generic.List<string>();
+							foreach (object screen in screens)
+							{
+								if (screen == null) continue;
+								string n = screen.GetType().Name;
+								names.Add(n);
+								if (n == "PreloaderScreen") preloaderInstance = screen;
+								else if (n == "LoadingScreen2") loadingScreen2Instance = screen;
+							}
+							topScreens = "[" + string.Join(",", names) + "]";
+						}
+					}
+					catch (Exception ex) { topScreens = "<sm read failed: " + ex.Message + ">"; }
+				}
+
+				string preloaderState = preloaderInstance == null
+					? "<not in screens>"
+					: SafeRead(_wprPreloaderStateField, preloaderInstance);
+
+				string loadingScreen2State = "<no LoadingScreen2>";
+				if (loadingScreen2Instance != null)
+				{
+					var stateField = loadingScreen2Instance.GetType().GetField("_state",
+						System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+					loadingScreen2State = SafeRead(stateField, loadingScreen2Instance);
+				}
+
+				// LevelHandler diagnostic — critical for understanding why LemmyTravelScreen
+				// ignores taps. HandleInput requires isLoaded=true AND Instance.state==2 AND
+				// IsLevelPurchasedOrPartOfTrial(currentLevel) returning non-null true.
+				string lhStatus = "<no LevelHandler type>";
+				if (_wprLevelHandlerType != null)
+				{
+					try
+					{
+						object isLoaded = _wprLevelHandlerIsLoadedField?.GetValue(null);
+						object inst = _wprLevelHandlerInstanceProp?.GetValue(null);
+						object lhState = inst != null ? _wprLevelHandlerStateField?.GetValue(inst) : null;
+						object curLevel = inst != null ? _wprLevelHandlerCurrentLevelField?.GetValue(inst) : null;
+						string curLevelDesc = curLevel == null ? "<null>" :
+							(curLevel.GetType().GetField("worldsIndex")?.GetValue(curLevel) + "/" +
+							 curLevel.GetType().GetField("levelsIndex")?.GetValue(curLevel) + " sceneName=" +
+							 curLevel.GetType().GetField("sceneName")?.GetValue(curLevel));
+						lhStatus = "isLoaded=" + isLoaded + " state=" + lhState + " currentLevel=" + curLevelDesc;
+					}
+					catch (Exception ex) { lhStatus = "<lh read failed: " + ex.Message + ">"; }
+				}
+
+				WprDebugTrace.WriteLine(
+					"[wpr-heartbeat] tick=" + _wprTicksTotal +
+					" loadingProgress=" + loadingProgress +
+					" isLoading=" + isLoading +
+					" sceneToLoad=" + (sceneToLoad ?? "<null>") +
+					" loadedLevel=" + (loadedLevelName ?? "<null>") +
+					" loadIsComplete=" + loadIsComplete +
+					" hasDrawBeenCalled=" + hasDrawBeenCalled +
+					" Preloader._state=" + preloaderState +
+					" LoadingScreen2._state=" + loadingScreen2State +
+					" LevelHandler:" + lhStatus +
+					" screens=" + topScreens);
+			}
+			catch (Exception ex)
+			{
+				// Once: report and disable further attempts.
+				WprDebugTrace.WriteLine("[wpr-heartbeat] disabled after exception: " + ex.GetType().FullName + ": " + ex.Message);
+				_wprAppLoadingProgressField = null;
+			}
+		}
+
+		private static string SafeRead(System.Reflection.FieldInfo f, object target)
+		{
+			if (f == null) return "<no field>";
+			try { return (f.GetValue(target)?.ToString()) ?? "<null>"; }
+			catch (Exception ex) { return "<read failed: " + ex.Message + ">"; }
+		}
+
+		// Fired once at the end of the first Tick to give XNA games a real `Activated`
+		// event. INTERNAL_isActive is initialised true (see field comment above) so the
+		// BeforeLoop `IsActive = true` set is a no-op and Activated does NOT raise during
+		// startup — but many WP7 ports flip a private "we're in the foreground" flag only
+		// from their Activated handler (e.g. Sonic 4 Episode I's AppMain.isForeground).
+		// Without an explicit fire that flag stays false forever and the game self-pauses
+		// every Update. We defer the fire until after the first Update completes so
+		// games like Asphalt 5, whose Activated handler reads a dictionary populated by
+		// the first Update tick, don't crash with KeyNotFoundException. Subsequent
+		// foreground/background transitions are handled by the SDL FOCUS_LOST/GAINED
+		// branches in SDL2_FNAPlatform (the FOCUS_LOST branch fires Deactivated on
+		// window minimise/background on both desktop and Android).
+		private bool _wprInitialActivatedFired;
+
 		public void Tick()
 		{
 			/* NOTE: This code is very sensitive and can break very badly,
@@ -511,6 +726,13 @@ namespace Microsoft.Xna.Framework
 				WprDebugTrace.WriteLine($"[wpr-trace] Game.Tick #{wprTraceIndex} (IsFixedTimeStep={IsFixedTimeStep}, suppressDraw={suppressDraw})");
 				_wprTraceTickCount++;
 			}
+
+			// Heartbeat after the verbose first-30-ticks window: every 60 ticks (~2s at 30fps)
+			// dump the loading-state of FFWD-using games. Without this we have zero visibility
+			// after the initial second, which is exactly when splash-screen hangs become
+			// diagnosable (e.g. Tentacles getting stuck because Application.loadingProgress
+			// never reaches 1.0f). Best-effort: any reflection failure is swallowed.
+			WprEmitGameStateHeartbeat();
 
 			AdvanceElapsedTime();
 
@@ -548,24 +770,19 @@ namespace Microsoft.Xna.Framework
 				ref textInputSuppress
 			);
 
-			// XNA Game Studio 4.0 on Windows Phone 7 auto-called FrameworkDispatcher.Update
-			// once per Game.Update tick. Desktop XNA did NOT, and stock FNA inherited that
-			// behaviour — it only pumps the dispatcher from the Game ctor and EndRun. WP7
-			// games rely on the auto-pump to fire MediaPlayer.ActiveSongChanged /
-			// MediaStateChanged and to drive the TouchPanel update; without it a game that
-			// waits for a "splash song finished" or "intro video ended" callback before
-			// advancing past its loading screen will sit on a blank backbuffer forever
-			// (Asphalt 5 symptom: every frame is just Clear → white → Present with zero
-			// draw primitives, repeating indefinitely). Pump it here so the lifecycle
-			// callbacks the game subscribed to actually fire.
-			try
-			{
-				FrameworkDispatcher.Update();
-			}
-			catch (Exception ex)
-			{
-				WprDebugTrace.WriteLine("[wpr-ex] FrameworkDispatcher.Update threw: " + ex);
-			}
+			// NOTE: do NOT call FrameworkDispatcher.Update() here. Stock FNA's
+			// Game.Update (the virtual at the bottom of this file) already calls
+			// FrameworkDispatcher.Update() at its end — that gets the per-tick pump
+			// WP7 games expect. Adding a second pump here makes TouchPanel.Update run
+			// twice per Tick, and the second invocation immediately promotes
+			// touches[0] from Pressed to Moved (because between the two pumps,
+			// touches.CopyTo(prevTouches, 0) makes prev=Pressed). The game's
+			// TouchPanel.GetState() then only ever returns Moved — never Pressed —
+			// so touch dispatchers that switch on State==Pressed silently swallow
+			// every tap. Asphalt 5 splash → main menu transition was the surfaced
+			// case (h2.b "press" path never recorded a finger because the game
+			// dispatched op 2 (move) instead of op 0 (press), so h2.d's release
+			// guard `if (i > 0)` failed and `be.ey.fm` never flipped).
 
 			// Do not allow any update to take longer than our maximum.
 			if (accumulatedElapsedTime > MaxElapsedTime)
@@ -705,6 +922,21 @@ namespace Microsoft.Xna.Framework
 				}
 				if (beginOk)
 				{
+					// Preemptively clear any SpriteBatch left in Begin state from a
+					// prior tick whose Draw threw mid-batch. Without this, every frame
+					// after a mid-batch NRE wastes itself on InvalidOperationException
+					// at the next Begin() — that's exactly what produced the PvZ flicker
+					// (NRE frame leaves batch wedged → next frame all-or-nothing).
+					try
+					{
+						int preReset = Microsoft.Xna.Framework.Graphics.SpriteBatch.WprForceEndAll();
+						if (preReset > 0)
+						{
+							WprDebugTrace.WriteLine($"[wpr-trace] Game.Draw #{wprTraceIndex} pre-clean: reset {preReset} stale SpriteBatch(es) from prior tick");
+						}
+					}
+					catch { }
+
 					try
 					{
 						if (wprTraceThisTick)
@@ -720,6 +952,18 @@ namespace Microsoft.Xna.Framework
 					catch (Exception ex)
 					{
 						WprDebugTrace.WriteLine("[wpr-ex] Game.Draw threw: " + ex);
+						try
+						{
+							int reset = Microsoft.Xna.Framework.Graphics.SpriteBatch.WprForceEndAll();
+							if (reset > 0)
+							{
+								WprDebugTrace.WriteLine($"[wpr-trace] Game.Draw recovery: force-ended {reset} SpriteBatch(es) left in Begin state");
+							}
+						}
+						catch (Exception recoveryEx)
+						{
+							WprDebugTrace.WriteLine("[wpr-ex] Game.Draw SpriteBatch recovery threw: " + recoveryEx);
+						}
 					}
 
 					try
@@ -736,6 +980,20 @@ namespace Microsoft.Xna.Framework
                     }
 
                 }
+			}
+
+			if (!_wprInitialActivatedFired)
+			{
+				_wprInitialActivatedFired = true;
+				try
+				{
+					WprDebugTrace.WriteLine("[wpr-trace] Game.Tick: firing initial OnActivated post-first-tick; subscribers=" + (Activated?.GetInvocationList().Length ?? 0));
+					OnActivated(this, EventArgs.Empty);
+				}
+				catch (Exception ex)
+				{
+					WprDebugTrace.WriteLine("[wpr-ex] Game - initial OnActivated threw: " + ex);
+				}
 			}
 		}
 
@@ -1106,7 +1364,22 @@ namespace Microsoft.Xna.Framework
 			{
 				Tick();
 			}
-			OnExiting(this, EventArgs.Empty);
+
+			// OnExiting fires the user game's Exiting event handler chain. WP7 games often
+			// gather metrics or save state here and frequently NRE when the user closes
+			// during early boot — e.g. Tentacles' MetricsSender.CreateTearDownExtendedKeys
+			// dereferences GlobalManager.Instance.currentProfile, which is null until the
+			// preloader finishes. Catch + log so the host (WPR.UI.Desktop) doesn't show its
+			// "unexpected error" dialog every time the user closes a game that's still
+			// initialising. The process is exiting anyway.
+			try
+			{
+				OnExiting(this, EventArgs.Empty);
+			}
+			catch (Exception ex)
+			{
+				Debug.WriteLine("[ex] OnExiting handler threw (swallowed on shutdown path): " + ex);
+			}
 		}
 
 		private TimeSpan AdvanceElapsedTime()

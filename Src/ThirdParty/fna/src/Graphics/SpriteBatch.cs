@@ -276,14 +276,25 @@ namespace Microsoft.Xna.Framework.Graphics
 		) {
 			if (beginCalled)
 			{
-				throw new InvalidOperationException(
-					"Begin has been called before calling End" +
-					" after the last call to Begin." +
-					" Begin cannot be called again until" +
-					" End has been successfully called."
-				);
+				// WPR compat: some WP7 games (e.g. PvZ's Sexy.Graphics layer)
+				// track their own batch-began flag separately from FNA's, and
+				// after a swallowed Draw exception the two get out of sync,
+				// causing the game to issue Begin twice without an intervening
+				// End. Throwing here drops the entire frame and produces
+				// black-screen / flicker. Silently soft-reset and start the
+				// new batch instead — the discarded first batch's sprites are
+				// lost, but the frame as a whole renders.
+				if (_wprDoubleBeginTraceCount < 5)
+				{
+					_wprDoubleBeginTraceCount++;
+					WprDebugTrace.WriteLine($"[wpr-trace] SpriteBatch.Begin #{_wprDoubleBeginTraceCount}: double-Begin tolerated (soft-reset, dropping {numSprites} queued sprite(s))");
+				}
+				numSprites = 0;
+				customEffect = null;
+				// fall through to reinitialise
 			}
 			beginCalled = true;
+			WprRegisterActive(this);
 
 			this.sortMode = sortMode;
 
@@ -309,19 +320,27 @@ namespace Microsoft.Xna.Framework.Graphics
 		// the game is actually submitting batches of sprites. A black screen with zero
 		// SpriteBatch.End logs means the game's Draw doesn't try to render anything.
 		private static int _wprEndTraceCount;
+		private static int _wprDoubleBeginTraceCount;
+		private static int _wprStrayEndTraceCount;
 		private int _wprBatchItemSnapshot;
 
 		public void End()
 		{
 			if (!beginCalled)
 			{
-				throw new InvalidOperationException(
-					"End was called, but Begin has not yet" +
-					" been called. You must call Begin " +
-					" successfully before you can call End."
-				);
+				// WPR compat: symmetric tolerance to the double-Begin case
+				// above. Stray End calls happen when the game's own batch-
+				// state flag desyncs from FNA's after a swallowed exception.
+				// Silently no-op instead of throwing.
+				if (_wprStrayEndTraceCount < 5)
+				{
+					_wprStrayEndTraceCount++;
+					WprDebugTrace.WriteLine($"[wpr-trace] SpriteBatch.End #{_wprStrayEndTraceCount}: stray End tolerated (no batch open)");
+				}
+				return;
 			}
 			beginCalled = false;
+			WprUnregisterActive(this);
 
 			_wprBatchItemSnapshot = numSprites;
 
@@ -336,6 +355,49 @@ namespace Microsoft.Xna.Framework.Graphics
 				_wprEndTraceCount++;
 				WprDebugTrace.WriteLine($"[wpr-trace] SpriteBatch.End #{_wprEndTraceCount}: sprites={_wprBatchItemSnapshot} sortMode={sortMode}");
 			}
+		}
+
+		#endregion
+
+		#region WPR Recovery Hook
+
+		// Tracks every SpriteBatch instance currently in Begin state so that if
+		// a game's Draw throws mid-Begin (e.g. PvZ NREs inside AchievementsWidget.Draw
+		// because its achievement list is empty), the next frame's first Begin()
+		// doesn't trip "Begin has been called before calling End" and lock the
+		// screen black indefinitely. WprForceEndAll() is called from Game.Tick's
+		// Draw catch block — it just resets the flag (no FlushBatch, since the
+		// device state may itself be wedged), letting the next frame re-Begin.
+		private static readonly object _wprActiveLock = new object();
+		private static readonly HashSet<SpriteBatch> _wprActive = new HashSet<SpriteBatch>();
+
+		private static void WprRegisterActive(SpriteBatch batch)
+		{
+			lock (_wprActiveLock) { _wprActive.Add(batch); }
+		}
+
+		private static void WprUnregisterActive(SpriteBatch batch)
+		{
+			lock (_wprActiveLock) { _wprActive.Remove(batch); }
+		}
+
+		internal static int WprForceEndAll()
+		{
+			SpriteBatch[] snapshot;
+			lock (_wprActiveLock)
+			{
+				if (_wprActive.Count == 0) return 0;
+				snapshot = new SpriteBatch[_wprActive.Count];
+				_wprActive.CopyTo(snapshot);
+				_wprActive.Clear();
+			}
+			foreach (var b in snapshot)
+			{
+				b.beginCalled = false;
+				b.customEffect = null;
+				b.numSprites = 0;
+			}
+			return snapshot.Length;
 		}
 
 		#endregion

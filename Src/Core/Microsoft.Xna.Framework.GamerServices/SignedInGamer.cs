@@ -17,6 +17,18 @@ namespace Microsoft.Xna.Framework.GamerServices
         private const int DelaySignedInMillis = 2000;
         private static bool FirstSignInSessionDone = false;
 
+        /// <summary>
+        /// Serialises invocation of SignedIn handlers. Games like Tentacles register
+        /// the same callback twice from <c>Game1.Initialize</c>; without this gate
+        /// the two <see cref="Task.Delay"/> continuations fire on parallel threadpool
+        /// threads and both call into <see cref="Gamer.GetProfile"/>, which races on
+        /// the shared <see cref="AchievementContext"/> DbContext singleton and trips
+        /// EF Core's ConcurrencyDetector. Serialising the handler invocations keeps
+        /// the user-visible semantics (handlers fire ~2s after the first <c>+=</c>)
+        /// without requiring a per-call DbContext rewrite.
+        /// </summary>
+        private static readonly SemaphoreSlim _SignInGate = new SemaphoreSlim(1, 1);
+
         private PlayerIndex _PlayerIndex;
 
         private GamerPrivileges _GamerPrivileges = new GamerPrivileges();
@@ -24,7 +36,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         private GamerPresence _GamerPresence = new GamerPresence();
 
         public event EventHandler<EventArgs> AvatarChanged;
-        
+
         public static void Reset()
         {
             FirstSignInSessionDone = false;
@@ -37,44 +49,53 @@ namespace Microsoft.Xna.Framework.GamerServices
 #if DEBUG
                 Trace.WriteLine($"[wpr-trace] SignedInGamer.SignedIn += handler (FirstSignInSessionDone={FirstSignInSessionDone}, value={(value == null ? "null" : "set")})");
 #endif
-                if (value != null)
-                {
-                    if (FirstSignInSessionDone)
-                    {
-#if DEBUG
-                        Trace.WriteLine("[wpr-trace] SignedInGamer.SignedIn: firing immediately (already signed in)");
-#endif
-                        value.Invoke(null, new SignedInEventArgs(_SignedInGamers[0]));
-                    } else
-                    {
-#if DEBUG
-                        Trace.WriteLine($"[wpr-trace] SignedInGamer.SignedIn: scheduling Task.Delay({DelaySignedInMillis}ms) → invoke");
-#endif
-                        Task.Delay(DelaySignedInMillis).ContinueWith(previous =>
-                        {
-#if DEBUG
-                            Trace.WriteLine("[wpr-trace] SignedInGamer.SignedIn: Task.Delay completed, firing handler");
-#endif
-                            FirstSignInSessionDone = true;
+                if (value == null) return;
 
-                            //TODO: handle multiple signed in gamers
-                            try
-                            {
-                                value.Invoke(null, new SignedInEventArgs(_SignedInGamers[0]));
+                if (FirstSignInSessionDone)
+                {
 #if DEBUG
-                                Trace.WriteLine("[wpr-trace] SignedInGamer.SignedIn: handler returned normally");
+                    Trace.WriteLine("[wpr-trace] SignedInGamer.SignedIn: firing immediately (already signed in)");
 #endif
-                            }
-                            catch (Exception ex)
-                            {
-#if DEBUG
-                                Trace.WriteLine("[wpr-ex] SignedInGamer.SignedIn handler threw: " + ex);
-#endif
-                                Debug.WriteLine("[ex] SignedInGamer exception: " + ex.Message);
-                            }
-                        });
-                    }
+                    value.Invoke(null, new SignedInEventArgs(_SignedInGamers[0]));
+                    return;
                 }
+
+#if DEBUG
+                Trace.WriteLine($"[wpr-trace] SignedInGamer.SignedIn: scheduling Task.Delay({DelaySignedInMillis}ms) → serialised invoke");
+#endif
+                // Both halves of the work go on a Task.Run so we never block the caller
+                // of `+=`. The semaphore (acquired AFTER the delay) ensures that if N
+                // handlers register, they each get their ~2s delay in parallel but their
+                // synchronous Invoke runs serially — preventing the GetProfile→DbContext
+                // race described on _SignInGate above.
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(DelaySignedInMillis).ConfigureAwait(false);
+                    await _SignInGate.WaitAsync().ConfigureAwait(false);
+                    try
+                    {
+#if DEBUG
+                        Trace.WriteLine("[wpr-trace] SignedInGamer.SignedIn: gate acquired, firing handler");
+#endif
+                        FirstSignInSessionDone = true;
+                        //TODO: handle multiple signed in gamers
+                        value.Invoke(null, new SignedInEventArgs(_SignedInGamers[0]));
+#if DEBUG
+                        Trace.WriteLine("[wpr-trace] SignedInGamer.SignedIn: handler returned normally");
+#endif
+                    }
+                    catch (Exception ex)
+                    {
+#if DEBUG
+                        Trace.WriteLine("[wpr-ex] SignedInGamer.SignedIn handler threw: " + ex);
+#endif
+                        Debug.WriteLine("[ex] SignedInGamer exception: " + ex.Message);
+                    }
+                    finally
+                    {
+                        _SignInGate.Release();
+                    }
+                });
             }
             remove
             {
@@ -94,6 +115,8 @@ namespace Microsoft.Xna.Framework.GamerServices
                 List<Achievement> achievementStored = await AchievementContext.Current!.Achievements!
                     .Where(x => x.OwnProductId == Application.Current.ProductId)
                     .ToListAsync();
+
+                Trace.WriteLine($"[wpr-trace] BeginGetAchievements: {achievementStored.Count} rows for {Application.Current.ProductId}");
 
                 if (achievementStored.Count == 0)
                 {

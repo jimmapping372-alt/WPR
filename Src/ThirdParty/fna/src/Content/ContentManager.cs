@@ -209,8 +209,28 @@ namespace Microsoft.Xna.Framework.Content
 					return (T) asset;
 				}
 			}
-			// Load the asset.
-			result = ReadAsset<T>(assetName, null);
+			// Load the asset. Wrap in try/catch + log so that callers that swallow the
+			// exception (e.g. PressPlay.FFWD.AssetHelper.Load wraps Load<T> in a catch
+			// that returns default(T)) don't hide the diagnosis. We still rethrow —
+			// the caller's swallow is preserved, only the trace is added.
+			try
+			{
+				result = ReadAsset<T>(assetName, null);
+			}
+			catch (Exception ex)
+			{
+				WprDebugTrace.WriteLine(
+					"[wpr-content] Load<" + typeof(T).FullName + ">(\"" + assetName +
+					"\") threw: " + ex.GetType().FullName + ": " + ex.Message);
+				if (ex.InnerException != null)
+				{
+					WprDebugTrace.WriteLine(
+						"[wpr-content]   inner: " + ex.InnerException.GetType().FullName +
+						": " + ex.InnerException.Message);
+				}
+				WprDebugTrace.WriteLine("[wpr-content]   stack: " + ex.StackTrace);
+				throw;
+			}
 			loadedAssets[key] = result;
 			return result;
 		}

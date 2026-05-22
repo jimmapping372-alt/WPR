@@ -70,6 +70,52 @@ namespace Microsoft.Xna.Framework
 			{
 				return File.OpenRead(full);
 			}
+			catch (FileNotFoundException)
+			{
+				// FFWD-style games (PressPlay's Tentacles etc.) call
+				// `Application.LoadLevel("MyLevel")` with a bare name even though every
+				// level XNB ships under `Content/Scenes/`. ContentManager produces the
+				// path `Content/MyLevel.xnb`; the file isn't there, the load fails
+				// silently inside AssetHelper, and the game hangs waiting on
+				// `loadingProgress == 1.0f`. Try the Scenes/ subdir as a fallback when
+				// the original path is directly under Content/ — covers the Tentacles
+				// case (LoadLevel("MainMenu") → Content/Scenes/MainMenu.xnb if present,
+				// LoadLevel("Veins_…") → Content/Scenes/Veins_….xnb) without affecting
+				// games that don't use this layout (the fallback file simply won't
+				// exist either, and we fall through to the same throw).
+				string sep = Path.DirectorySeparatorChar.ToString();
+				string altRel = null;
+				string contentDir = "Content" + sep;
+				if (safeName.StartsWith(contentDir, StringComparison.OrdinalIgnoreCase))
+				{
+					string rest = safeName.Substring(contentDir.Length);
+					// Only retry if the asset is a direct child of Content/ (no other
+					// folder hint) — otherwise we'd send Content/Textures/foo to
+					// Content/Scenes/Textures/foo, which is nonsense.
+					if (!rest.Contains(sep))
+					{
+						altRel = Path.Combine("Content", "Scenes", rest);
+					}
+				}
+
+				if (altRel != null)
+				{
+					string altFull = Path.Combine(TitleLocation.Path, altRel);
+					if (File.Exists(altFull))
+					{
+						WprDebugTrace.WriteLine($"[wpr-trace] TitleContainer.OpenStream Scenes/ fallback hit: \"{full}\" -> \"{altFull}\"");
+						try { return File.OpenRead(altFull); }
+						catch (Exception ex2)
+						{
+							WprDebugTrace.WriteLine($"[wpr-ex] TitleContainer.OpenStream fallback FAILED full=\"{altFull}\": {ex2.GetType().Name}: {ex2.Message}");
+							throw;
+						}
+					}
+				}
+
+				WprDebugTrace.WriteLine($"[wpr-ex] TitleContainer.OpenStream FAILED full=\"{full}\": FileNotFoundException (no Scenes/ fallback either)");
+				Debug.WriteLine("[ex] Exception : File not found: " + full);
+			}
 			catch (Exception ex)
 			{
 				WprDebugTrace.WriteLine($"[wpr-ex] TitleContainer.OpenStream FAILED full=\"{full}\": {ex.GetType().Name}: {ex.Message}");

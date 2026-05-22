@@ -24,8 +24,17 @@ namespace WPR
 
     /// <summary>
     /// Install-time read-only scan that pulls achievements out of the game's
-    /// install folder. Three sources, tried in priority order; the FIRST one
+    /// install folder. Four sources, tried in priority order; the FIRST one
     /// that yields results wins (the lower-priority sources are skipped):
+    ///
+    /// <para><b>Source D (override) — known-product hardcoded catalogue.</b>
+    /// Some titles store their achievement keys in an inline static array
+    /// rather than the XNA content pipeline catalogue, with no
+    /// <c>AwardAchievement(literal)</c> callsite and no <c>Content/Achievements</c>
+    /// folder — sources A/B/C all return empty for them and the game NREs at
+    /// runtime when it iterates an empty list. For known-bad ProductIDs the
+    /// keys recovered via decompilation are kept in
+    /// <see cref="KnownProductCatalogues"/> and short-circuit the rest.</para>
     ///
     /// <para><b>Source A — XNA XML content catalogue.</b> Games shipped with
     /// the XNA content pipeline routinely compile their achievement metadata
@@ -80,8 +89,50 @@ namespace WPR
         /// </summary>
         private const string KeepProductToken = "HD";
 
-        public static List<XnaAchievementEntry> ExtractRich(string installFolder)
+        /// <summary>
+        /// ProductIDs whose achievement keys can't be recovered by sources A/B/C
+        /// because the game stores them in an inline static array (e.g. PvZ's
+        /// <c>Sexy.Achievements.ACHIEVEMENT_KEYS</c>) and never reaches an
+        /// <c>AwardAchievement(literal)</c> callsite during static scanning.
+        /// Keys are the verbatim strings the game compares against at runtime —
+        /// they're also the display names, since this title family doesn't
+        /// distinguish ids from names.
+        /// </summary>
+        private static readonly Dictionary<string, string[]> KnownProductCatalogues =
+            new(StringComparer.OrdinalIgnoreCase)
+            {
+                // Plants vs. Zombies — keys recovered from Sexy.Achievements.ACHIEVEMENT_KEYS
+                // in LAWN.dll (the 18-entry static array constructed in the cctor).
+                ["706f822a-a47e-e011-986b-78e7d1fa76f8"] = new[]
+                {
+                    "Home Lawn Security",
+                    "Master of Mosticulture",
+                    "Better Off Dead",
+                    "China Shop",
+                    "Beyond the Grave",
+                    "Crash of the Titan",
+                    "Soil Your Plants",
+                    "Explodonator",
+                    "Close Shave",
+                    "Shopaholic",
+                    "Nom Nom Nom",
+                    "No Fungus Among Us",
+                    "Dont Pea in the Pool",
+                    "Grounded",
+                    "Good Morning",
+                    "Popcorn Party",
+                    "Roll Some Heads",
+                    "Disco is Undead",
+                },
+            };
+
+        public static List<XnaAchievementEntry> ExtractRich(string installFolder, string? productId = null)
         {
+            // Source D: known-product override. Authoritative for titles whose
+            // keys aren't visible to the other sources.
+            var fromKnown = TryExtractFromKnownProduct(productId);
+            if (fromKnown.Count > 0) return fromKnown;
+
             // Source A: XML catalogue. Returns full rich entries.
             var fromXml = TryExtractFromXmlCatalogue(installFolder);
             if (fromXml.Count > 0) return fromXml;
@@ -100,14 +151,33 @@ namespace WPR
         /// Convenience: just the key set. Kept for callers that don't need
         /// the metadata.
         /// </summary>
-        public static HashSet<string> Extract(string installFolder)
+        public static HashSet<string> Extract(string installFolder, string? productId = null)
         {
             var keys = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var entry in ExtractRich(installFolder))
+            foreach (var entry in ExtractRich(installFolder, productId))
             {
                 keys.Add(entry.Key);
             }
             return keys;
+        }
+
+        // ------------------------------------------------------------------
+        // Source D: known-product hardcoded catalogue.
+        // ------------------------------------------------------------------
+
+        private static List<XnaAchievementEntry> TryExtractFromKnownProduct(string? productId)
+        {
+            if (string.IsNullOrEmpty(productId)) return new List<XnaAchievementEntry>();
+            if (!KnownProductCatalogues.TryGetValue(productId, out var keys))
+                return new List<XnaAchievementEntry>();
+
+            Log.Info(LogCategory.AppInstall,
+                $"XnaAchievementCodeExtractor: {keys.Length} hardcoded achievement(s) " +
+                $"applied from known-product catalogue for {productId}.");
+
+            return keys.Select(k => new XnaAchievementEntry(
+                Key: k, Name: k, Description: string.Empty, IconFilenameStem: null)
+            ).ToList();
         }
 
         // ------------------------------------------------------------------

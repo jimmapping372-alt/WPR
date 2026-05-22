@@ -121,6 +121,7 @@ namespace Microsoft.Xna.Framework.Input.Touch
 			return FNAPlatform.GetTouchCapabilities();
 		}
 
+		private static int _wprGetStateTraceCount;
 		public static TouchCollection GetState()
 		{
 			validTouches.Clear();
@@ -130,6 +131,18 @@ namespace Microsoft.Xna.Framework.Input.Touch
 				{
 					validTouches.Add(touches[i]);
 				}
+			}
+			// Log only when the collection is non-empty — confirms the game is
+			// reading touch state when the user clicks, and what State value the
+			// game sees. If we see SetFinger populate touches[0] but never see this
+			// trace, the game's Update isn't calling TouchPanel.GetState() (i.e.
+			// CGame1.g() isn't being dispatched). If we DO see this trace but the
+			// game still doesn't advance, the gate is inside the obfuscated state
+			// class — not in our touch plumbing.
+			if (validTouches.Count > 0 && _wprGetStateTraceCount < 30)
+			{
+				_wprGetStateTraceCount++;
+				WprDebugTrace.WriteLine($"[wpr-trace] TouchPanel.GetState #{_wprGetStateTraceCount}: count={validTouches.Count} t0.State={validTouches[0].State} t0.Id={validTouches[0].Id} t0.Pos=({validTouches[0].Position.X:F1},{validTouches[0].Position.Y:F1})");
 			}
 			return new TouchCollection(validTouches.ToArray());
 		}

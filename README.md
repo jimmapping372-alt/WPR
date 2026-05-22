@@ -37,6 +37,13 @@ Since branching from upstream WPR:
 - **Per-game debug logs.** `ApplicationLaunch` mirrors `Trace`/`Debug`
   output to `%LocalAppData%\WPR\Apps\<ProductId>\wpr_game_debug.log` so
   silent-crash games leave a diagnostic file.
+- **Keyboard accelerometer.** Bind keys to simulate phone tilt for games
+  that use `Microsoft.Devices.Sensors.Accelerometer`. The Controls page
+  (sidebar) lets you set the four tilt directions, adjust sensitivity,
+  toggle the in-game tilt overlay, and live-preview the synthesized
+  reading. Orientation-aware: in landscape games the screen-relative
+  intent (W = "tilt up the screen") is rotated into the device-portrait
+  frame the WP7 sensor contract expects.
 - **Startup health-check & explicit Avalonia init logging** on both desktop
   and Android targets.
 - **FontAwesome icon provider** registered in the AppBuilder; main app
@@ -135,25 +142,28 @@ moving target — entries are tagged with where they currently sit on the
 ### Current status
 
 
-| Game                 | Status   | Notes                                                                                                                  |
-|----------------------|----------|------------------------------------------------------------------------------------------------------------------------|
-| 3D Brick Breaker     | Playable | Working                                                                                                                |
-| Asphalt 5            | Partial  | Loads splashscreen but unable to play                                                                                  |
-| Bejeweled Live +     | Playable | Working                                                                                                                |
-| Brain Challenge      | Playable | Working                                                                                                                |
-| Bug Village          | Playable | Working                                                                                                                |
-| Castlevania Puzzle   | Partial  | Loads but unable to start arcade or story mode                                                                         |
-| Final Fantasy        | Playable | Working                                                                                                                |
-| Fruit Ninja          | Playable | Working                                                                                                                |
-| Hydro Thunder GO     | Partial  | Runs but can be slow to initially load. No accelerometer functionality yet (change settings to wheel/throttle in game) |
-| Zuma's Revenge       | Playable | Working                                                                                                                |
-| Minesweeper `[SL]`   | Broken   | Help and Options pages now load; bottom app bar z-order fixed. Core gameplay still under verification.                 |
-| Penguins Can't Fly   | Broken   | `NullReferenceException` in `Penguin.PenguinGame.get_MenuShowing()` — missing shim/initialisation.                     |
-| Acedia: Indie Horror | Broken   | `InvalidOperationException: Sequence contains no elements` during `Activator.CreateInstance`.                          |
-| Asphalt Pogonya      | Broken   | `PlatformNotSupportedException` on `PhoneDirect3DXamlAppInterop.App` (Direct3D XAML hybrid not supported).             |
-| Tentacles            | Broken   | `MissingMethodException: WPR.WindowsCompability.IsolatedStorageSettings2.Contains(String)`.                            |
-| Dig It               | Broken   | `MissingMethodException: Microsoft.Xna.Framework.GamerServices.LeaderboardReader.get_TotalLeaderboardSize()`.          |
-| Mirror's Edge        | Broken   | Crashes on launch (RE in progress, see commit `c5e988d9`).                                                             |
+| Game                 | Status   | Notes                                                                                                         |
+|----------------------|----------|---------------------------------------------------------------------------------------------------------------|
+| 3D Brick Breaker     | Playable | Working                                                                                                       |
+| Asphalt 5            | Playable | Working                                                                                                       |
+| Bejeweled Live +     | Playable | Working                                                                                                       |
+| Brain Challenge      | Playable | Working                                                                                                       |
+| Bug Village          | Playable | Working                                                                                                       |
+| Castlevania Puzzle   | Partial  | Loads but unable to start arcade or story mode                                                                |
+| Final Fantasy        | Playable | Working                                                                                                       |
+| Fruit Ninja          | Playable | Working                                                                                                       |
+| Hydro Thunder GO     | Playable | Runs end-to-end. Steering uses the keyboard accelerometer (Controls page); slow first load is expected.       |
+| Plants vs Zombies    | Playable | End-to-end after tolerant SpriteBatch Begin/End                                                               |
+| Sonic 4 Episode 1    | Playable | Confirmed playable after `Game.Activated` deferred-fire + multi-touch fixes                                   |
+| Tentacles            | Playable | End-to-end after cross-ALC `ContentTypeReader` resolution + `Content/Scenes/` fallback + mouse-as-touch fixes |
+| Uno                  | Playable | Working                                                                                                       |
+| Zuma's Revenge       | Playable | Working                                                                                                       |
+| Minesweeper `[SL]`   | Broken   | Help and Options pages now load; bottom app bar z-order fixed. Core gameplay still under verification.        |
+| Penguins Can't Fly   | Broken   | `NullReferenceException` in `Penguin.PenguinGame.get_MenuShowing()` — missing shim/initialisation.            |
+| Acedia: Indie Horror | Broken   | `InvalidOperationException: Sequence contains no elements` during `Activator.CreateInstance`.                 |
+| Asphalt Pogonya      | Broken   | `PlatformNotSupportedException` on `PhoneDirect3DXamlAppInterop.App` (Direct3D XAML hybrid not supported).    |
+| Dig It               | Broken   | `MissingMethodException: Microsoft.Xna.Framework.GamerServices.LeaderboardReader.get_TotalLeaderboardSize()`. |
+| Mirror's Edge        | Broken   | Crashes on launch (RE in progress, see commit `c5e988d9`).                                                    |
 
 ### Reported by community on legacy WPR (Oct 2023)
 
@@ -177,7 +187,6 @@ historical baseline. Source:
 | NFS Undercover                        | Playable      | Untested on this fork                                           |
 | Pac-Man                               | Playable      | Untested on this fork                                           |
 | Skulls of the Shogun                  | Playable      | Untested on this fork                                           |
-| Sonic 4 Episode 1                     | Playable      | Untested on this fork                                           |
 | Star Wars Cantina                     | Playable      | Untested on this fork                                           |
 | The Sims 3                            | Playable      | Untested on this fork                                           |
 | The Sims Medieval                     | Playable      | Untested on this fork                                           |
@@ -192,7 +201,6 @@ historical baseline. Source:
 | Angry Birds                           | Broken        | Crashes on launch                                               |
 | BBB: App-ocalypse                     | Broken        | Error screen on load                                            |
 | Crimson Dragon: Side Story            | Broken        | Error screen on load                                            |
-| Plants vs Zombies                     | Broken        | Crashes                                                         |
 
 > If you re-test any of these and the status has changed (good or bad),
 > please open an issue with the build hash + error so this table can be
@@ -252,6 +260,165 @@ A common gotcha — patcher changes do **not** affect already-installed games:
   with a `<game>.dll.original` sibling kept for re-patching.
 
 ## Update History
+### 22/05/2026
+- Compat: Plants vs Zombies promoted from Broken → Playable (end-to-end after
+  achievement-seed + SpriteBatch tolerance fixes below)
+- Fix: PvZ launched to a black screen because `Lawn.AchievementsWidget.Draw`
+  NRE'd inside `Achievements.GetAchievementItem` — the game's static
+  `gAchievementList` was empty, so the lookup returned null and the NRE
+  escaped mid-`SpriteBatch.Begin`, wedging every subsequent frame on
+  `"Begin has been called before calling End"`. Root cause: PvZ stores its
+  18 achievement keys in an inline `Achievements.ACHIEVEMENT_KEYS[]`
+  static array (built in the cctor), so none of `XnaAchievementCodeExtractor`'s
+  three sources — `Content/xml/socialnetworks.xml.xnb`, IL `ldstr` near
+  `AwardAchievement*` callsites, or `Content/Achievements/*.xnb` filenames —
+  recovered any keys at install time. The seeder wrote 0 rows;
+  `BeginGetAchievements` returned 0 rows; the game's `GetAchievementsCallback`
+  added 0 items to `gAchievementList`. Added a Source D
+  (`KnownProductCatalogues`) keyed by ProductId that returns hardcoded keys
+  recovered via decompilation, threaded `productId` through
+  `XnaAchievementCodeExtractor.ExtractRich` and `XnaAchievementSeeder.SeedAsync`.
+  **Install-time change — affected games need reinstalling.** Now seeds 18
+  rows and `BeginGetAchievements: 18 rows` confirms it
+- Fix: After the achievement seed worked the game flickered on main menu and
+  in level — `Lawn.GameSelector.DrawOverlay` still NRE'd every frame on some
+  other null reference, but the deeper problem was that PvZ's `Sexy.Graphics`
+  layer tracks its own `spritebatchBegan` flag separately from FNA's
+  `beginCalled`, and the two desync once any Draw exception leaves the game's
+  flag stale. The result was a within-frame double-Begin via
+  `SetupDrawMode → EndFrame → EndDrawImageTransformed → BeginFrame`, throwing
+  `InvalidOperationException` and dropping every other frame. We can't reach
+  the game's private flag from the shim. Made FNA's `SpriteBatch.Begin` /
+  `End` tolerant of out-of-order calls: a second `Begin` without an
+  intervening `End` soft-resets and starts a fresh batch (drops the queued
+  sprites of the discarded batch); a stray `End` without a matching `Begin`
+  no-ops. First 5 of each are logged so we can spot if it's firing in
+  production. Shim-only — no reinstall
+- Feat: Diagnostic `[wpr-trace] BeginGetAchievements: N rows for <ProductId>`
+  log in `SignedInGamer.BeginGetAchievements` confirms whether the install-
+  time seed populated for a given game on first launch
+- Feat: Keyboard accelerometer simulator. New Controls page in the desktop
+  sidebar binds four keys (defaults WASD) to tilt directions; readings flow
+  through the existing `Microsoft.Devices.Sensors.Accelerometer` so games
+  see them without any per-game shim work. Sensitivity slider, master
+  toggle, in-game tilt-overlay (Avalonia for Silverlight host, FNA
+  `DrawableGameComponent` for XNA), and a live-preview dial on the Controls
+  page. Orientation-aware: the screen-relative key intent gets rotated into
+  the device-portrait frame the WP7 sensor contract expects, so a landscape
+  game (W = "tilt up the screen") produces the correct device-X tilt the
+  game interprets as steer-left. Desktop orientation is inferred from the
+  back-buffer aspect because FNA's `Window.CurrentOrientation` only updates
+  from SDL display-rotation events that never fire on the desktop.
+  `Accelerometer.CurrentValue` / `IsDataValid` / `TimeBetweenUpdates` were
+  also added so games that poll instead of subscribing to `ReadingChanged`
+  see live readings too
+- Compat: Hydro Thunder GO promoted from Partial → Playable (steerable via
+  the keyboard accelerometer)
+- Compat: Uno confirmed Playable
+- Fix: Sonic 4 Episode I self-paused on every Update tick. The game's
+  `AppMain.isForeground` flag is flipped true only by its `Game.Activated`
+  handler, and `Activated` never fired on WPR because `INTERNAL_isActive`
+  was initialised `true` (suppressing the BeforeLoop setter's no-op
+  transition to avoid Asphalt 5's pre-Initialize KeyNotFoundException).
+  Net effect: `isForeground` stayed false, the game's pause condition
+  (`!isForeground` ORed into the trigger) re-armed every frame, and pause
+  reasserted itself immediately after dismissal. Fix: defer a one-shot
+  `OnActivated` to the end of the first `Game.Tick`, where every game's
+  per-Update state (including Asphalt 5's) is already populated
+- Fix: Window background/foreground transitions now fire
+  `Deactivated`/`Activated` correctly on desktop and Android. Restored the
+  `SDL_WINDOWEVENT_FOCUS_LOST → IsActive=false` branch in
+  `SDL2_FNAPlatform.PollEvents` that had been commented out under a
+  `//RnD` marker. Symmetric `FOCUS_GAINED` was already wired
+- Feat: Multi-touch input is now additive with the mouse-as-touch shim.
+  `UpdateTouchPanelState` previously branched either-or — if
+  `TouchPanel.MouseAsTouch` was on (the default for XNA games on WPR) the
+  real-finger poll loop was skipped entirely, capping all input at a
+  single touch even on multi-touch hardware. New shape: real fingers fill
+  slots `0..MAX_TOUCHES-2` from `SDL_GetTouchFinger`; when `MouseAsTouch`
+  is on the mouse takes the last slot with synthetic finger ID
+  `int.MaxValue` so it can never collide with a real finger's ID.
+  Sonic 4's "hold D-pad + tap jump" gameplay now works
+- Fix: Asphalt 5 splash → menu tap-to-continue now registers. The
+  per-`Game.Tick` `FrameworkDispatcher.Update()` call added on 21/05 was
+  redundant — stock FNA's `Game.Update` already pumps the dispatcher at its
+  end. Pumping twice per tick made `TouchPanel.Update` run twice in close
+  succession; the second run promoted `touches[0]` from `Pressed` to `Moved`
+  before `CGame1.g()` could read it, so `h2.b` (press handler) never
+  recorded the finger and `h2.d`'s `if (i > 0)` release-guard always
+  failed. Splash-state `lt.b()` waiting on `be.ey.fm != 0` was the surfaced
+  case. Removed the redundant pump in FNA `Game.Tick`
+- Compat: Asphalt 5 promoted from Partial → Playable
+- Compat: Sonic 4 Episode I confirmed Playable (pause loop fixed,
+  multi-touch routed)
+- Compat: Tentacles promoted from Broken → Playable (end-to-end after the
+  fixes below)
+- Fix: FNA's `ContentTypeReaderManager` couldn't resolve
+  `ReflectiveReader<PressPlay.FFWD.Scene>` because `Type.GetType()` doesn't
+  see types in the user game's collectible ALC, and the existing
+  `string.Split(',')` fallback broke on the generic argument
+  `[[PressPlay.FFWD.Scene, PressPlay.FFWD, …]]` (the comma between the
+  inner type and its assembly hint was indistinguishable from the outer
+  delimiter). Replaced with `Type.GetType`'s resolver-callback overload
+  that walks `AppDomain.CurrentDomain.GetAssemblies()` — which returns
+  every loaded assembly across every ALC — so generic readers
+  parameterised by user-ALC types resolve correctly. Tentacles' Preloader
+  scene XNB now deserialises
+- Fix: FFWD-based games call `Application.LoadLevel("X")` with bare scene
+  names even though every level XNB ships under `Content/Scenes/`.
+  ContentManager constructed `Content/X.xnb`, the file wasn't there,
+  `AssetHelper.Load<T>` silently swallowed the failure and returned
+  `default(T)`, and the loading screen hung forever waiting on
+  `loadingProgress == 1.0f`. `TitleContainer.OpenStream` now retries
+  `Content/<name>.xnb` as `Content/Scenes/<name>.xnb` when the original is
+  missing and has no subdirectory hint. Safe for non-FFWD games (fallback
+  file simply won't exist either)
+- Fix: `Microsoft.Phone.Shell.StandardTileData.Count` was `int` in our
+  shim but the WP7 SDK uses `int?`. Tentacles' live-tile updater calls
+  `set_Count(int?)` every frame from a component Update and was tripping
+  `MissingMethodException` ~once per tick
+- Fix: `FNA.Game.RunLoop` now wraps the final `OnExiting(this, EventArgs.Empty)`
+  in try/catch + log. Tentacles' `MetricsSender.CreateTearDownExtendedKeys`
+  NREs on `GlobalManager.Instance.currentProfile` when the user closes
+  during early boot (currentProfile is null until the preloader finishes
+  loading it). Can't fix the game code, but the host no longer surfaces
+  its "unexpected error" dialog on close
+- Fix: `SignedInGamer.SignedIn` handler invocations now serialise behind a
+  `SemaphoreSlim`. Tentacles' `Game1.Initialize` registers the same
+  callback twice; both invocations were firing in parallel via separate
+  `Task.Delay.ContinueWith`s, racing on the shared
+  `AchievementContext.Current` and tripping EF Core's `ConcurrencyDetector`
+  inside `Gamer.GetProfile`. Handlers still get their independent ~2 s
+  delay; only the synchronous Invoke runs single-file
+- Fix: Mouse-as-touch clicks now produce `GestureType.Tap` gestures on
+  desktop. `SDL_MOUSEMOTION` was forwarded to `INTERNAL_onTouchEvent`
+  unconditionally, including hover (no button held). Hover motion ran
+  `GestureDetector.OnMoved` which set `activeFingerId = 1`; the next
+  `MOUSEBUTTONDOWN`'s `OnPressed(1)` then saw `activeFingerId != NO_FINGER`
+  and routed into pinch-init (state = PINCHING). The matching
+  `MOUSEBUTTONUP` ran `OnReleased_Pinch` instead of Tap detection — so
+  Tap-gated screens (Tentacles' `LemmyTravelScreen`, "tap to continue"
+  prompts) never advanced from mouse but worked fine from real touch
+  (no hover). Fix: `SDL2_FNAPlatform` skips the synthesised Moved event
+  when `evt.motion.state == 0`. Drag (button-held motion) still goes
+  through, so swipe/pinch/drag from mouse continue to work
+- Feat: Periodic FFWD loading-state heartbeat in FNA `Game.Tick`
+  (`[wpr-heartbeat]`, fires ~every 2 s past the first-30-ticks verbose
+  trace cap). Reflects `PressPlay.FFWD.Application` and
+  `PressPlay.Tentacles.Scripts.LevelHandler` static fields plus the
+  active screen stack and the current level identity — turned a "stuck
+  on loading screen" symptom into a precise gate-by-gate diagnosis.
+  Best-effort, swallows all reflection errors, `[Conditional("DEBUG")]`-gated
+- Feat: `ContentManager.Load<T>` now logs the underlying exception with
+  type/HResult/inner/stack before rethrowing (`[wpr-content]`). FFWD's
+  `AssetHelper.Load` silently catches ContentManager.Load failures and
+  returns `default(T)`; without the trace, a missing ContentTypeReader or
+  malformed XNB was invisible. Trace lets the caller's swallow stand —
+  only adds visibility
+- Feat: Assembly-resolver diagnostics in `ApplicationLaunch` —
+  `[wpr-resolve-user]` / `[wpr-resolve-default]` lines log every Resolving
+  probe with full exception details when `LoadFromAssemblyPath` fails
+
 ### 21/05/2026
 - Fix: Asphalt 5 sat on a blank loading screen — `StartupMode` enum integer
   values now match the WP7 SDK (`Launch=1`, `Activate=2`), and FNA's

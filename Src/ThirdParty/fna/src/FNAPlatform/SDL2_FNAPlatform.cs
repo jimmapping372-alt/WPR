@@ -993,6 +993,25 @@ namespace Microsoft.Xna.Framework
 
 					if (TouchPanel.MouseAsTouch)
 					{
+						// Only synthesise a Moved touch event when a mouse button is
+						// actually held — i.e. the user is "dragging". Forwarding hover
+						// (button-not-down) motion to GestureDetector.OnMoved tripped
+						// the activeFingerId tracker: hover would set activeFingerId=1,
+						// then the next real MOUSEBUTTONDOWN's OnPressed(1) saw
+						// activeFingerId != NO_FINGER and routed into pinch-init
+						// (state=PINCHING). The matching MOUSEBUTTONUP then dispatched
+						// OnReleased_Pinch instead of running Tap detection — so mouse
+						// clicks on Tap-gated screens (Tentacles' LemmyTravelScreen,
+						// any "tap to continue") emitted nothing. Real touch has no
+						// hover so the bug was mouse-exclusive.
+						//
+						// SDL_MOUSEMOTION.state is a bitmask of currently-pressed
+						// buttons — non-zero means at least one button is held.
+						if (evt.motion.state == 0)
+						{
+							continue;
+						}
+
 						// motion.x/y is the *current* position; motion.xrel/yrel is the
 						// per-event delta. INTERNAL_onTouchEvent's third/fourth args are
 						// the delta (it multiplies by DisplayWidth/Height and feeds it
@@ -1160,8 +1179,14 @@ namespace Microsoft.Xna.Framework
 					}
 					else if (evt.window.windowEvent == SDL.SDL_WindowEventID.SDL_WINDOWEVENT_FOCUS_LOST)
 					{
-						//RnD
-						/*
+						// Symmetric inverse of FOCUS_GAINED. Restored to give XNA games a real
+						// "you're not in the foreground" signal — without this many WP7 ports
+						// (Sonic 4 Episode I, etc.) leave their isForeground field permanently
+						// false because the *first* Activated never reaches them. The Game.Run
+						// post-BeforeLoop OnActivated fire-once handles initial activation; this
+						// handles every subsequent background/foreground transition on desktop
+						// and Android (SDL maps app lifecycle to FOCUS_LOST/GAINED on both).
+						WprDebugTrace.WriteLine("[wpr-trace] SDL_WINDOWEVENT_FOCUS_LOST -> IsActive=false");
 						game.IsActive = false;
 
 						if (SDL.SDL_GetCurrentVideoDriver() == "x11")
@@ -1171,7 +1196,6 @@ namespace Microsoft.Xna.Framework
 
 						// Give the screensaver back, we're not that important now.
 						SDL.SDL_EnableScreenSaver();
-						*/
 					}
 
 					// Window Resize
@@ -2444,27 +2468,97 @@ namespace Microsoft.Xna.Framework
 
 		private static bool _wprLastMouseAsTouchPressed;
 		private static int _wprMouseAsTouchTraceCount;
+
+		// Synthetic finger ID for the mouse-as-touch slot. Picked well outside the range
+		// SDL hands out for real fingers (which are small positive ints via
+		// Math.Abs(finger->id) + 1) so a game tracking touches by .Id can't confuse the
+		// mouse with a real finger when both are live at once.
+		private const int WPR_MOUSE_AS_TOUCH_FINGER_ID = int.MaxValue;
+
 		public static unsafe void UpdateTouchPanelState()
 		{
-			if (TouchPanel.MouseAsTouch)
+			/* Two input sources can feed touches[] simultaneously:
+			 *   - Real touchscreen fingers, polled from SDL_GetTouchFinger (slots
+			 *     0..MAX_TOUCHES-2 when the mouse slot is in use, otherwise the full
+			 *     0..MAX_TOUCHES-1 range).
+			 *   - The mouse, when TouchPanel.MouseAsTouch is true, in the last slot
+			 *     (MAX_TOUCHES-1). A reserved slot avoids overwriting real-finger data.
+			 *
+			 * The original FNA branch was either-or — if MouseAsTouch was on the
+			 * real-finger poll never ran, which capped Windows-hosted XNA games at one
+			 * touch even on hardware with multi-touch. Sonic 4 Episode I needs at least
+			 * two simultaneous touches (hold the D-pad, tap jump) so the additive shape
+			 * is required.
+			 */
+
+			bool mouseAsTouch = TouchPanel.MouseAsTouch;
+			int mouseSlot = TouchPanel.MAX_TOUCHES - 1;
+			int maxFingerSlots = mouseAsTouch ? mouseSlot : TouchPanel.MAX_TOUCHES;
+
+			// --- Real touchscreen fingers ---
+			long touchId = TouchPanel.LastActiveTouchId;
+			if (touchId == 0 && SDL.SDL_GetNumTouchDevices() > 0)
+			{
+				// No SDL_FINGERDOWN event has fired yet (e.g. Windows promoted the
+				// WM_POINTER touch to a mouse event before SDL could synthesise a
+				// finger) but a touch device is enumerated. Fall back to device 0.
+				touchId = SDL.SDL_GetTouchDevice(0);
+				TouchPanel.LastActiveTouchId = (int)touchId;
+			}
+
+			int fingersWritten = 0;
+			if (touchId != 0)
+			{
+				int numFingers = SDL.SDL_GetNumTouchFingers(touchId);
+				int n = Math.Min(numFingers, maxFingerSlots);
+				for (int i = 0; i < n; i += 1)
+				{
+					SDL.SDL_Finger* finger = (SDL.SDL_Finger*)SDL.SDL_GetTouchFinger(touchId, i);
+					if (finger == null)
+					{
+						continue;
+					}
+
+					// The ID base is zero, sometimes OSes (Android) make finger ids
+					// negative — games typically expect finger ID >= 1. Abs+1 normalises.
+					TouchPanel.SetFinger(
+						fingersWritten,
+						Math.Abs((int)finger->id) + 1,
+						new Vector2(
+							(float)Math.Round(finger->x * TouchPanel.DisplayWidth),
+							(float)Math.Round(finger->y * TouchPanel.DisplayHeight)
+						)
+					);
+					fingersWritten += 1;
+				}
+			}
+
+			// Clear any unused finger slots so stale state doesn't leak across ticks.
+			for (int i = fingersWritten; i < maxFingerSlots; i += 1)
+			{
+				TouchPanel.SetFinger(i, TouchPanel.NO_FINGER, Vector2.Zero);
+			}
+
+			// --- Mouse-as-touch (last slot) ---
+			if (mouseAsTouch)
 			{
 				uint flags = SDL.SDL_GetMouseState(out int x, out int y);
 				bool nowPressed = ((ButtonState)(flags & SDL.SDL_BUTTON_LMASK) == ButtonState.Pressed);
 
 				// Edge-triggered trace so we see exactly when the mouse-as-touch poll
 				// transitions between pressed/not-pressed — the moments that flip
-				// touches[0].State between Pressed/Released/Invalid.
+				// the mouse slot between Pressed/Released/Invalid.
 				if (nowPressed != _wprLastMouseAsTouchPressed && _wprMouseAsTouchTraceCount < 30)
 				{
-					_wprMouseAsTouchTraceCount++;
-					WprDebugTrace.WriteLine($"[wpr-trace] UpdateTouchPanelState mouse poll #{_wprMouseAsTouchTraceCount}: nowPressed={nowPressed} pos=({x},{y})");
+					_wprMouseAsTouchTraceCount += 1;
+					WprDebugTrace.WriteLine($"[wpr-trace] UpdateTouchPanelState mouse poll #{_wprMouseAsTouchTraceCount}: nowPressed={nowPressed} pos=({x},{y}) fingersWritten={fingersWritten} slot={mouseSlot}");
 					_wprLastMouseAsTouchPressed = nowPressed;
 				}
 
 				if (nowPressed)
 				{
 					/* SetFinger expects DisplayWidth/Height-relative coords (the real-finger
-					 * path below scales by DisplayWidth/Height). SDL_GetMouseState returns
+					 * path above scales by DisplayWidth/Height). SDL_GetMouseState returns
 					 * raw window pixels — without this scale, games whose SDL window has
 					 * been resized away from BackBufferWidth/Height (which is what
 					 * DisplayWidth/Height tracks) see clicks at wrong logical positions and
@@ -2480,36 +2574,11 @@ namespace Microsoft.Xna.Framework
 						? (float)y * TouchPanel.DisplayHeight / wh
 						: y;
 
-					TouchPanel.SetFinger(0, 1, new Vector2(fx, fy));
+					TouchPanel.SetFinger(mouseSlot, WPR_MOUSE_AS_TOUCH_FINGER_ID, new Vector2(fx, fy));
 				}
 				else
 				{
-					TouchPanel.SetFinger(0, TouchPanel.NO_FINGER, Vector2.Zero);
-				}
-			} else
-			{
-				// Poll the touch device for all active fingers
-				for (int i = 0; i < TouchPanel.MAX_TOUCHES; i += 1)
-				{
-					SDL.SDL_Finger* finger = (SDL.SDL_Finger*)SDL.SDL_GetTouchFinger(TouchPanel.LastActiveTouchId, i);
-					if (finger == null)
-					{
-						// No finger found at this index
-						TouchPanel.SetFinger(i, TouchPanel.NO_FINGER, Vector2.Zero);
-						continue;
-					}
-
-					// Send the finger data to the TouchPanel
-					// The ID base is zero, sometimes OS like android make finger id negative
-					// It's not most games want really, they usually expect finger ID >= 1
-					TouchPanel.SetFinger(
-						i,
-						Math.Abs((int)finger->id) + 1,
-						new Vector2(
-							(float)Math.Round(finger->x * TouchPanel.DisplayWidth),
-							(float)Math.Round(finger->y * TouchPanel.DisplayHeight)
-						)
-					);
+					TouchPanel.SetFinger(mouseSlot, TouchPanel.NO_FINGER, Vector2.Zero);
 				}
 			}
 		}

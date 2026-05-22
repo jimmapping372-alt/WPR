@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using WPR.UI.Pages;
 using WPR.UI.ViewModels;
 using Avalonia;
@@ -9,7 +9,7 @@ namespace WPR.UI.Views
     public class MainViewNavigator
     {
         private int _CurrentIndex = -1;
-        private UserControl[] _Pages = new UserControl[4];
+        private UserControl[] _Pages = new UserControl[5];
 
         public void SetupNavigation(TabControl control, TransitioningContentControl contentControl)
         {
@@ -34,11 +34,15 @@ namespace WPR.UI.Views
                                 break;
 
                             case 2:
-                                _Pages[2] = new AboutPage();
+                                _Pages[2] = new ControlsPage();
                                 break;
 
                             case 3:
-                                _Pages[3] = new AchievementsPage();
+                                _Pages[3] = new AboutPage();
+                                break;
+
+                            case 4:
+                                _Pages[4] = new AchievementsPage();
                                 break;
                         }
                     }

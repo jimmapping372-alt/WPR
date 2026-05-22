@@ -18,6 +18,22 @@ namespace WPR.Common
             // Null = use the WP7 default "Cyan" (#FF1BA1E2). Consumed by
             // WPR.SilverlightCompability.PhoneTheme on launch.
             public string? AccentColor;
+
+            // Keyboard → accelerometer simulation. Persisted as enum-name strings to keep
+            // the JSON readable; values map to Microsoft.Xna.Framework.Input.Keys for the
+            // XNA host and are translated to Avalonia.Input.Key for the Silverlight host.
+            // Null = use the default WASD layout.
+            public string? TiltKeyLeft;
+            public string? TiltKeyRight;
+            public string? TiltKeyForward;
+            public string? TiltKeyBackward;
+            // Per-axis peak acceleration in g-units when a direction key is held. Default
+            // 0.7 ≈ sin(45°). Use null to fall back to the default.
+            public double? TiltSensitivity;
+            // When true, an on-screen tilt indicator overlays the running game.
+            public bool TiltOverlayEnabled;
+            // Master switch for keyboard accelerometer simulation. Default = true.
+            public bool? TiltSimulationEnabled;
         };
 
         private const string ConfigurationFilePath = "config.json";
@@ -70,6 +86,50 @@ namespace WPR.Common
         {
             get => _ConfPrivate!.AccentColor;
             set => _ConfPrivate!.AccentColor = value;
+        }
+
+        // Default WASD layout — A/D tilt left/right, W/S tilt the top edge away/toward
+        // the user. Values are Microsoft.Xna.Framework.Input.Keys enum names.
+        public const string DefaultTiltKeyLeft = "A";
+        public const string DefaultTiltKeyRight = "D";
+        public const string DefaultTiltKeyForward = "W";
+        public const string DefaultTiltKeyBackward = "S";
+        public const double DefaultTiltSensitivity = 0.7;
+
+        public string TiltKeyLeft
+        {
+            get => _ConfPrivate!.TiltKeyLeft ?? DefaultTiltKeyLeft;
+            set => _ConfPrivate!.TiltKeyLeft = string.IsNullOrEmpty(value) ? null : value;
+        }
+        public string TiltKeyRight
+        {
+            get => _ConfPrivate!.TiltKeyRight ?? DefaultTiltKeyRight;
+            set => _ConfPrivate!.TiltKeyRight = string.IsNullOrEmpty(value) ? null : value;
+        }
+        public string TiltKeyForward
+        {
+            get => _ConfPrivate!.TiltKeyForward ?? DefaultTiltKeyForward;
+            set => _ConfPrivate!.TiltKeyForward = string.IsNullOrEmpty(value) ? null : value;
+        }
+        public string TiltKeyBackward
+        {
+            get => _ConfPrivate!.TiltKeyBackward ?? DefaultTiltKeyBackward;
+            set => _ConfPrivate!.TiltKeyBackward = string.IsNullOrEmpty(value) ? null : value;
+        }
+        public double TiltSensitivity
+        {
+            get => _ConfPrivate!.TiltSensitivity ?? DefaultTiltSensitivity;
+            set => _ConfPrivate!.TiltSensitivity = value;
+        }
+        public bool TiltOverlayEnabled
+        {
+            get => _ConfPrivate!.TiltOverlayEnabled;
+            set => _ConfPrivate!.TiltOverlayEnabled = value;
+        }
+        public bool TiltSimulationEnabled
+        {
+            get => _ConfPrivate!.TiltSimulationEnabled ?? true;
+            set => _ConfPrivate!.TiltSimulationEnabled = value;
         }
 
         public static event EventHandler<string?>? GameLibraryPathChanged;

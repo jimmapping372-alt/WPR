@@ -2,6 +2,9 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Microsoft.Devices.Sensors;
 using WPR.Common;
 using WPR;
 using SLFrameView = WPR.SilverlightCompability.PhoneApplicationFrameView;
@@ -128,7 +131,27 @@ namespace WPR.UI
                 var dock = new DockPanel { LastChildFill = true };
                 DockPanel.SetDock(bezel, Dock.Bottom);
                 dock.Children.Add(bezel);
-                dock.Children.Add(frameView);
+
+                // Overlay the tilt indicator on top of the frame view via a Grid so it sits
+                // in the same cell as the game's render surface. Toggled lazily by config —
+                // a user that never enables it pays nothing.
+                if (Configuration.Current?.TiltOverlayEnabled == true)
+                {
+                    var stack = new Grid();
+                    stack.Children.Add(frameView);
+                    stack.Children.Add(new TiltOverlay
+                    {
+                        IsHitTestVisible = false,
+                        HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+                        VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch,
+                    });
+                    dock.Children.Add(stack);
+                }
+                else
+                {
+                    dock.Children.Add(frameView);
+                }
+
                 window.Content = dock;
             }
             else
@@ -145,10 +168,24 @@ namespace WPR.UI
                 };
             }
 
+            // Wire the keyboard → accelerometer bridge at the window level so a focused child
+            // (a text input for instance) doesn't steal the keystrokes. Tunneling = "preview"
+            // — fires before the focused control sees the event, so tilt keys always work.
+            KeyboardTiltBinding.ApplyConfigurationToHost();
+            window.AddHandler(InputElement.KeyDownEvent, OnTiltKeyDown, RoutingStrategies.Tunnel);
+            window.AddHandler(InputElement.KeyUpEvent,   OnTiltKeyUp,   RoutingStrategies.Tunnel);
+
+            // If the user alt-tabs away mid-game we'll never see the corresponding KeyUp,
+            // so reset the simulator on focus loss to avoid a stuck tilt.
+            window.Deactivated += (_, _) => KeyboardAccelerometerHost.ResetAll();
+
             var tcs = new TaskCompletionSource<object?>();
             window.Closed += (s, e) =>
             {
                 _CurrentWindow = null;
+                window.RemoveHandler(InputElement.KeyDownEvent, OnTiltKeyDown);
+                window.RemoveHandler(InputElement.KeyUpEvent,   OnTiltKeyUp);
+                KeyboardAccelerometerHost.ResetAll();
                 // Drop user-assembly references, then unload the ALC so the .dll file lock
                 // releases before the user tries to reinstall. Anything that holds a managed
                 // reference to types in the user assembly will pin the ALC and prevent unload.
@@ -171,6 +208,27 @@ namespace WPR.UI
             _CurrentWindow = window;
             window.Show();
             return tcs.Task;
+        }
+
+        private static void OnTiltKeyDown(object? sender, KeyEventArgs e)
+        {
+            // OS key-repeat fires KeyDown multiple times while the key is held; that's fine
+            // because NotifyTiltKey just sets the down-state flag — repeated "true" calls
+            // are idempotent.
+            var dir = KeyboardTiltBinding.ResolveAvaloniaKey(e.Key);
+            if (dir.HasValue)
+            {
+                KeyboardAccelerometerHost.NotifyTiltKey(dir.Value, true);
+            }
+        }
+
+        private static void OnTiltKeyUp(object? sender, KeyEventArgs e)
+        {
+            var dir = KeyboardTiltBinding.ResolveAvaloniaKey(e.Key);
+            if (dir.HasValue)
+            {
+                KeyboardAccelerometerHost.NotifyTiltKey(dir.Value, false);
+            }
         }
     }
 }

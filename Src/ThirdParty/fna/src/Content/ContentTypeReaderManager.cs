@@ -204,21 +204,69 @@ namespace Microsoft.Xna.Framework.Content
 
 						if (l_readerType == null)
 						{
-							// Workaround for .NET Core and folder structure of the phone app
-							// Because .NET new only can get DLLs either in NuGet or you tell it first when build
-							// NOTE: Key and version is not yet checked
+							// Workaround for .NET Core + user-game collectible ALC: the user
+							// assembly (e.g. PressPlay.FFWD) is loaded into a separate ALC,
+							// which Type.GetType() can't see from the default ALC. Also, the
+							// inner generic-argument string of a type like
+							//   ReflectiveReader`1[[PressPlay.FFWD.Scene, PressPlay.FFWD,
+							//     Version=…, Culture=…, PublicKeyToken=…]]
+							// contains commas, so splitting on comma was breaking the outer
+							// type name. Use Type.GetType's resolver overload to walk every
+							// loaded assembly across all ALCs (AppDomain.CurrentDomain
+							// .GetAssemblies() returns them all, default + user).
+							try
+							{
+								l_readerType = Type.GetType(
+									readerTypeString,
+									assemblyResolver: name =>
+									{
+										foreach (Assembly a in AppDomain.CurrentDomain.GetAssemblies())
+										{
+											if (a.GetName().Name == name.Name) return a;
+										}
+										return null;
+									},
+									typeResolver: (asm, typeName, ignoreCase) =>
+									{
+										if (asm != null)
+										{
+											Type t = asm.GetType(typeName, false, ignoreCase);
+											if (t != null) return t;
+										}
+										// No assembly hint, or hint didn't have the type — last-ditch scan.
+										foreach (Assembly a in AppDomain.CurrentDomain.GetAssemblies())
+										{
+											Type t = a.GetType(typeName, false, ignoreCase);
+											if (t != null) return t;
+										}
+										return null;
+									},
+									throwOnError: false);
+							}
+							catch { }
+						}
+
+						if (l_readerType == null)
+						{
+							// Final fallback (kept for parity with prior behaviour): the
+							// pre-cross-ALC naïve split-by-comma. Won't help generic types
+							// but might help in edge cases the resolver above misses.
 							string[] components = readerTypeString.Split(',');
 							for (int l = 0; l < components.Length; l++)
 							{
 								components[l] = new Regex("[*'\",_&#^@!]").Replace(components[l].Trim(), "_");
 							}
 
-							Assembly[] asmList = AppDomain.CurrentDomain.GetAssemblies();
-							foreach (Assembly asm in asmList)
+							if (components.Length >= 2)
 							{
-								if (asm.GetName().Name == components[1])
+								Assembly[] asmList = AppDomain.CurrentDomain.GetAssemblies();
+								foreach (Assembly asm in asmList)
 								{
-									l_readerType = asm.GetType(components[0]);
+									if (asm.GetName().Name == components[1])
+									{
+										l_readerType = asm.GetType(components[0]);
+										if (l_readerType != null) break;
+									}
 								}
 							}
 						}

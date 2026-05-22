@@ -42,7 +42,7 @@ namespace WPR
                 }
 
                 List<XnaAchievementEntry> entries;
-                try { entries = XnaAchievementCodeExtractor.ExtractRich(installFolder); }
+                try { entries = XnaAchievementCodeExtractor.ExtractRich(installFolder, productId); }
                 catch (Exception ex)
                 {
                     Log.Warn(LogCategory.AppInstall,

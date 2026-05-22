@@ -90,6 +90,25 @@
                               VerticalAlignment="Center"
                               HorizontalAlignment="Center"
                               Spacing="6">
+                    <ic:Icon Value="fa-solid fa-gamepad" FontSize="22"/>
+                    <TextBlock Text="CONTROLS" FontSize="10"
+                               LetterSpacing="2"
+                               HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Grid>
+              </TabItem.Header>
+            </TabItem>
+
+            <TabItem>
+              <TabItem.Header>
+                <Grid Width="72" Height="72">
+                  <Border HorizontalAlignment="Left" Width="3"
+                          Background="{StaticResource WprAccentBrush}"
+                          IsVisible="{Binding $parent[TabItem].IsSelected}"/>
+                  <StackPanel Orientation="Vertical"
+                              VerticalAlignment="Center"
+                              HorizontalAlignment="Center"
+                              Spacing="6">
                     <ic:Icon Value="fa-solid fa-circle-info" FontSize="22"/>
                     <TextBlock Text="ABOUT" FontSize="10"
                                LetterSpacing="2"

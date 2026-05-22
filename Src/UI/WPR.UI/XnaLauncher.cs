@@ -61,25 +61,43 @@ namespace WPR.UI
                 iconBgra = null;
             }
 
-            Action<Game>? onCreated = null;
-            if (iconBgra != null && iconW > 0 && iconH > 0)
+            byte[]? pixelsCapture = iconBgra;
+            int wCapture = iconW, hCapture = iconH;
+
+            Action<Game> onCreated = game =>
             {
-                byte[] pixels = iconBgra;
-                int w = iconW, h = iconH;
-                onCreated = game =>
+                if (pixelsCapture != null && wCapture > 0 && hCapture > 0)
                 {
                     try
                     {
                         IntPtr window = game.Window?.Handle ?? IntPtr.Zero;
-                        if (window == IntPtr.Zero) return;
-                        ApplyIcon(window, pixels, w, h);
+                        if (window != IntPtr.Zero)
+                        {
+                            ApplyIcon(window, pixelsCapture, wCapture, hCapture);
+                        }
                     }
                     catch (Exception ex)
                     {
                         Log.Warn(LogCategory.AppLaunch, $"SDL_SetWindowIcon failed: {ex.Message}");
                     }
-                };
-            }
+                }
+
+                // Wire the keyboard → accelerometer simulator: a polling GameComponent on the
+                // game's own update tick, plus the overlay if enabled.
+                try
+                {
+                    KeyboardTiltBinding.ApplyConfigurationToHost();
+                    game.Components.Add(new TiltInputXnaComponent(game));
+                    if (WPR.Common.Configuration.Current?.TiltOverlayEnabled == true)
+                    {
+                        game.Components.Add(new TiltOverlayXnaComponent(game));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Warn(LogCategory.AppLaunch, $"Failed to wire tilt input/overlay component: {ex.Message}");
+                }
+            };
 
             return ApplicationLaunch.Start(app, requestOrientation, onCreated);
         }

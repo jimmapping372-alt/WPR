@@ -210,4 +210,40 @@
   <data name="SuccessfullyChangedDataPathMsg" xml:space="preserve">
     <value>The data directory will be used for the next launch of the runner!</value>
   </data>
+  <data name="AccelerometerControls" xml:space="preserve">
+    <value>Accelerometer (keyboard tilt)</value>
+  </data>
+  <data name="AccelerometerControlsHint" xml:space="preserve">
+    <value>Bind keys to simulate phone tilt for games that use the accelerometer. Key bindings and sensitivity take effect immediately; the overlay toggle applies on the next game launch.</value>
+  </data>
+  <data name="TiltSimulationEnabled" xml:space="preserve">
+    <value>Enable keyboard tilt simulation</value>
+  </data>
+  <data name="TiltLeftKey" xml:space="preserve">
+    <value>Tilt left</value>
+  </data>
+  <data name="TiltRightKey" xml:space="preserve">
+    <value>Tilt right</value>
+  </data>
+  <data name="TiltForwardKey" xml:space="preserve">
+    <value>Tilt forward</value>
+  </data>
+  <data name="TiltBackwardKey" xml:space="preserve">
+    <value>Tilt backward</value>
+  </data>
+  <data name="TiltSensitivity" xml:space="preserve">
+    <value>Tilt magnitude</value>
+  </data>
+  <data name="TiltOverlayEnabled" xml:space="preserve">
+    <value>Show tilt overlay during gameplay</value>
+  </data>
+  <data name="ResetTiltDefaults" xml:space="preserve">
+    <value>Reset to defaults</value>
+  </data>
+  <data name="LivePreview" xml:space="preserve">
+    <value>Live preview</value>
+  </data>
+  <data name="LivePreviewHint" xml:space="preserve">
+    <value>Click here, then press your bound keys to verify the tilt direction. The green dot tracks the current synthesized acceleration vector.</value>
+  </data>
 </root>

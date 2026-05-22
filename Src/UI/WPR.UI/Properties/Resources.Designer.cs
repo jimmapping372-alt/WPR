@@ -338,5 +338,42 @@ namespace WPR.UI.Properties {
                 return ResourceManager.GetString("SuccessfullyChangedDataPathMsg", resourceCulture);
             }
         }
+
+        public static string AccelerometerControls {
+            get { return ResourceManager.GetString("AccelerometerControls", resourceCulture); }
+        }
+        public static string AccelerometerControlsHint {
+            get { return ResourceManager.GetString("AccelerometerControlsHint", resourceCulture); }
+        }
+        public static string TiltSimulationEnabled {
+            get { return ResourceManager.GetString("TiltSimulationEnabled", resourceCulture); }
+        }
+        public static string TiltLeftKey {
+            get { return ResourceManager.GetString("TiltLeftKey", resourceCulture); }
+        }
+        public static string TiltRightKey {
+            get { return ResourceManager.GetString("TiltRightKey", resourceCulture); }
+        }
+        public static string TiltForwardKey {
+            get { return ResourceManager.GetString("TiltForwardKey", resourceCulture); }
+        }
+        public static string TiltBackwardKey {
+            get { return ResourceManager.GetString("TiltBackwardKey", resourceCulture); }
+        }
+        public static string TiltSensitivity {
+            get { return ResourceManager.GetString("TiltSensitivity", resourceCulture); }
+        }
+        public static string TiltOverlayEnabled {
+            get { return ResourceManager.GetString("TiltOverlayEnabled", resourceCulture); }
+        }
+        public static string ResetTiltDefaults {
+            get { return ResourceManager.GetString("ResetTiltDefaults", resourceCulture); }
+        }
+        public static string LivePreview {
+            get { return ResourceManager.GetString("LivePreview", resourceCulture); }
+        }
+        public static string LivePreviewHint {
+            get { return ResourceManager.GetString("LivePreviewHint", resourceCulture); }
+        }
     }
 }
