@@ -232,6 +232,13 @@ namespace WPR
                 // those calls are invalid once the FAudio engine handle is released), but
                 // ALC unload and WPR-side singleton reset have to run AFTER Game.Dispose
                 // (the game's Dispose may still touch our shims).
+                // Reset gamer-services state BEFORE the Game subclass is instantiated.
+                // Game ctors typically register a SignedIn handler from inside the ctor;
+                // if a prior launch left FirstSignInSessionDone == true, the handler would
+                // fire synchronously during `+=` (before the ctor finishes initialising
+                // its fields), which NREs e.g. Assassin's Creed XNAGame.
+                SignedInGamer.Reset();
+
                 Game? obj = Activator.CreateInstance(mainType!) as Game;
                 try
                 {
@@ -255,7 +262,6 @@ namespace WPR
 #endif
 
                     GraphicsDeviceManager2.RequestOrientation = requestOrientation;
-                    SignedInGamer.Reset();
 
                     WprTrace("[wpr-trace] ApplicationLaunch: subscribing to obj.Activated");
                     obj.Activated += (obj, args) =>

@@ -51,26 +51,30 @@ namespace Microsoft.Xna.Framework.GamerServices
 #endif
                 if (value == null) return;
 
-                if (FirstSignInSessionDone)
-                {
+                // NEVER fire synchronously from inside `+=`. Game ctors commonly do
+                // `SignedIn += handler` partway through the ctor, so a synchronous
+                // invoke runs the handler against a half-constructed `this` — Assassin's
+                // Creed XNAGame.a NREs that way. Real XNA never fires SignedIn during
+                // subscription either; we always defer to the threadpool.
+                //
+                // First subscriber in a session: 2s delay to give the ctor and
+                // Initialize() time to settle. Late subscribers: no delay, they're
+                // simulating "you missed the initial sign-in, here it is now".
+                int delayMs = FirstSignInSessionDone ? 0 : DelaySignedInMillis;
 #if DEBUG
-                    Trace.WriteLine("[wpr-trace] SignedInGamer.SignedIn: firing immediately (already signed in)");
-#endif
-                    value.Invoke(null, new SignedInEventArgs(_SignedInGamers[0]));
-                    return;
-                }
-
-#if DEBUG
-                Trace.WriteLine($"[wpr-trace] SignedInGamer.SignedIn: scheduling Task.Delay({DelaySignedInMillis}ms) → serialised invoke");
+                Trace.WriteLine($"[wpr-trace] SignedInGamer.SignedIn: scheduling Task.Delay({delayMs}ms) → serialised invoke");
 #endif
                 // Both halves of the work go on a Task.Run so we never block the caller
                 // of `+=`. The semaphore (acquired AFTER the delay) ensures that if N
-                // handlers register, they each get their ~2s delay in parallel but their
+                // handlers register, they each get their delay in parallel but their
                 // synchronous Invoke runs serially — preventing the GetProfile→DbContext
                 // race described on _SignInGate above.
                 _ = Task.Run(async () =>
                 {
-                    await Task.Delay(DelaySignedInMillis).ConfigureAwait(false);
+                    if (delayMs > 0)
+                    {
+                        await Task.Delay(delayMs).ConfigureAwait(false);
+                    }
                     await _SignInGate.WaitAsync().ConfigureAwait(false);
                     try
                     {
