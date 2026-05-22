@@ -101,7 +101,12 @@ namespace Microsoft.Xna.Framework.Input.Touch
 
 		internal static bool TouchDeviceExists;
 		internal static bool _MouseAsTouch = false;
-		internal static int LastActiveTouchId = 0;
+		// SDL_TouchID is a 64-bit value (on Windows it's derived from an hDevice pointer,
+		// so the upper bits matter on x64). Keep this as long so the device handle round-trips
+		// intact between SDL_FINGERDOWN and UpdateTouchPanelState's SDL_GetNumTouchFingers call —
+		// truncating to int silently zeroed the upper bits and made real-touchscreen polling
+		// always return 0 fingers.
+		internal static long LastActiveTouchId = 0;
 
 		#endregion
 

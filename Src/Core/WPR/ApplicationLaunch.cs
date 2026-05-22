@@ -55,33 +55,65 @@ namespace WPR
         /// </summary>
         private static AssemblyLoadContext? _CurrentUserAlc;
 
+        /// <summary>
+        /// Simple name (no extension) of the user game's main assembly. Set by <see cref="Start"/>
+        /// before the user ALC is published and cleared after unload. Used by the Default-ALC
+        /// resolver to distinguish "the main game DLL that FNA needs by name via Type.GetType"
+        /// (route into the user ALC) from "any other sibling DLL in the install dir"
+        /// (load into Default ALC so non-collectible static refs to its types are legal).
+        /// </summary>
+        private static string? _CurrentMainAssemblyName;
+
         static ApplicationLaunch()
         {
-            // When default-ALC code (e.g. FNA's ContentTypeReaderManager doing Type.GetType
-            // for a user content reader) asks to resolve a user assembly, route the load
-            // into the CURRENT collectible ALC. Returning the foreign-ALC assembly from this
-            // handler is valid — the default ALC treats it as a reference but the assembly
-            // and its statics remain in the user ALC, so they go away cleanly on unload.
+            // Default-ALC fallback for assemblies that live in the user game's install dir.
             //
-            // The previous implementation called `loadContext.LoadFromAssemblyPath(...)`,
-            // which loaded the user dll INTO the default ALC (loadContext == Default). That
-            // permanently contaminated the default ALC with launch-1 user types — their
-            // statics persisted across launches and FNA's static
-            // ContentTypeReaderManager.contentReadersCache pinned launch-1 reader instances
-            // forever. Symptom: launch-2 SexyFramework code ended up cross-wired with
-            // launch-1 driver singletons, manifesting as NREs deep in the content load path
-            // (e.g. Music.RegisterCallBack NRE because mApp.mMusicInterface was never set
-            // on the launch-2 SexyAppBase).
+            // Two distinct cases, handled differently:
+            //
+            // 1. The MAIN game DLL (e.g. IDigItWP7.dll, SexyFramework-app.dll). FNA's
+            //    ContentTypeReaderManager runs in Default ALC and does Type.GetType
+            //    ("Foo.SomeReader, MainDll") to resolve user content readers — it only uses
+            //    the returned Type via reflection (no static IL ref), so handing back the
+            //    user-ALC-loaded assembly is safe and KEEPS the user types collectible.
+            //    Loading the main DLL into Default ALC (as the original implementation did)
+            //    permanently contaminates Default with launch-1 user types: their statics
+            //    persist across launches and FNA's contentReadersCache pins launch-1 reader
+            //    instances forever, manifesting as NREs deep in the next launch (e.g.
+            //    Music.RegisterCallBack NRE on a SexyFramework re-launch).
+            //
+            // 2. SIBLING DLLs (e.g. Chipmunk.dll alongside IDigItWP7.dll). These are real
+            //    libraries that non-collectible code can statically reference. If we route
+            //    them into the user (collectible) ALC and hand them back to a Default-ALC
+            //    requestor, the CLR rejects the resulting non-collectible→collectible
+            //    binding with FileLoadException(0x80131515)/NotSupportedException
+            //    ("A non-collectible assembly may not reference a collectible assembly").
+            //    Symptom: I Dig It threw at frame 1 of IDigItApp.Update on its first
+            //    Chipmunk reference. Load siblings into Default ALC instead — they
+            //    become non-collectible (they persist across launches), but that's
+            //    typically harmless for self-contained native-wrapper libs like Chipmunk.
+            //    If a sibling DLL turns out to carry launch-specific managed statics that
+            //    leak across launches, deal with it the same way we already deal with
+            //    FNA's contentReadersCache: clear it explicitly in ResetWprSingletons.
             AssemblyLoadContext.Default.Resolving += (loadContext, name) =>
             {
                 var userAlc = _CurrentUserAlc;
                 if (userAlc == null) return null;
                 string candidate = Path.Combine(CurrentProductFolder, name.Name + ".dll");
                 if (!File.Exists(candidate)) return null;
-                try { return userAlc.LoadFromAssemblyPath(candidate); }
+
+                bool isMain = _CurrentMainAssemblyName != null &&
+                              string.Equals(name.Name, _CurrentMainAssemblyName, StringComparison.OrdinalIgnoreCase);
+                try
+                {
+                    Assembly loaded = isMain
+                        ? userAlc.LoadFromAssemblyPath(candidate)
+                        : loadContext.LoadFromAssemblyPath(candidate);
+                    WprTrace($"[wpr-resolve-default] OK   {name.FullName} -> {candidate} target={(isMain ? "user-alc" : "default-alc")} -> {loaded.FullName}");
+                    return loaded;
+                }
                 catch (Exception ex)
                 {
-                    WprTrace($"[wpr-resolve-default] FAIL {name.FullName} via {candidate}: {ex.GetType().FullName} hr=0x{ex.HResult:X8} msg=\"{ex.Message}\"");
+                    WprTrace($"[wpr-resolve-default] FAIL {name.FullName} via {candidate} target={(isMain ? "user-alc" : "default-alc")}: {ex.GetType().FullName} hr=0x{ex.HResult:X8} msg=\"{ex.Message}\"");
                     return null;
                 }
             };
@@ -197,7 +229,10 @@ namespace WPR
             // Publish the ALC so the Default.Resolving handler routes user-assembly loads
             // here instead of contaminating the default ALC. Must be set BEFORE LoadFromAssemblyPath
             // because the main assembly's load can trigger dependency resolution that hits the
-            // default ALC handler.
+            // default ALC handler. The main-assembly name is published alongside so the
+            // Default-ALC handler can tell the main game DLL apart from sibling library DLLs
+            // (they're routed differently — see the static ctor).
+            _CurrentMainAssemblyName = Path.GetFileNameWithoutExtension(asmPath);
             _CurrentUserAlc = alc;
             Assembly assem = alc.LoadFromAssemblyPath(asmPath);
 
@@ -531,6 +566,7 @@ namespace WPR
 
             // Stop routing default-ALC resolves to this (now-unloading) user ALC.
             _CurrentUserAlc = null;
+            _CurrentMainAssemblyName = null;
         }
 
         private static string BuildDiagnostics(Game? obj, Exception ex)

@@ -108,6 +108,32 @@ namespace Microsoft.Xna.Framework
 					"1"
 				);
 
+				/* WPR: stop SDL from synthesising mouse events from real touch input.
+				 * Windows promotes WM_POINTER touch to WM_MOUSE messages by default,
+				 * and SDL further synthesises SDL_MOUSEMOTION/SDL_MOUSEBUTTON events
+				 * from each touch. We already drop those events from the event queue
+				 * (filter on SDL_TOUCH_MOUSEID in the SDL_MOUSE* handlers), but the
+				 * *polled* mouse state — what SDL_GetMouseState returns — still
+				 * reflects the synthesised button-down. Our mouse-as-touch poll in
+				 * UpdateTouchPanelState reads that polled state and writes a phantom
+				 * finger into the reserved mouse-as-touch slot (last slot) at the
+				 * touch position. Net result for a single real finger: GetState()
+				 * reports 2 touches (slot 0 = real finger, slot 7 = phantom from
+				 * synthesised mouse), and games whose drawing logic gates on a
+				 * single primary touch (Max & the Magic Marker) refuse to draw,
+				 * interpreting the duplicate as a multi-touch gesture.
+				 *
+				 * Disabling this hint stops the synthesis at the SDL layer so
+				 * SDL_GetMouseState only reflects actual mouse hardware. Real
+				 * mouse input is unaffected (it never went through touch synth);
+				 * the SDL_FINGER* path that drives the real-touch poll is also
+				 * unaffected (it runs from raw touch events, not synth mouse).
+				 */
+				SDL.SDL_SetHint(
+					SDL.SDL_HINT_TOUCH_MOUSE_EVENTS,
+					"0"
+				);
+
 				/* Windows has terrible event pumping and doesn't give us
 				 * WM_PAINT events correctly. So we get to do this!
 				 * -flibit
@@ -1111,7 +1137,7 @@ namespace Microsoft.Xna.Framework
 				{
 					// Windows only notices a touch screen once it's touched
 					TouchPanel.TouchDeviceExists = true;
-					TouchPanel.LastActiveTouchId = (int)evt.tfinger.touchId;
+					TouchPanel.LastActiveTouchId = evt.tfinger.touchId;
 
 					TouchPanel.INTERNAL_onTouchEvent(
 						(int) evt.tfinger.fingerId,
@@ -2503,7 +2529,7 @@ namespace Microsoft.Xna.Framework
 				// WM_POINTER touch to a mouse event before SDL could synthesise a
 				// finger) but a touch device is enumerated. Fall back to device 0.
 				touchId = SDL.SDL_GetTouchDevice(0);
-				TouchPanel.LastActiveTouchId = (int)touchId;
+				TouchPanel.LastActiveTouchId = touchId;
 			}
 
 			int fingersWritten = 0;
@@ -2585,9 +2611,11 @@ namespace Microsoft.Xna.Framework
 
 		public static int GetNumTouchFingers()
 		{
-			return SDL.SDL_GetNumTouchFingers(
-				SDL.SDL_GetTouchDevice(TouchPanel.LastActiveTouchId)
-			);
+			// LastActiveTouchId is an SDL_TouchID (the device handle), not a device index,
+			// so pass it directly to SDL_GetNumTouchFingers. The previous code routed it
+			// through SDL_GetTouchDevice(int index), which was always semantically wrong —
+			// it only happened to behave when LastActiveTouchId was 0 (= first device's index).
+			return SDL.SDL_GetNumTouchFingers(TouchPanel.LastActiveTouchId);
 		}
 
 		#endregion

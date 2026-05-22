@@ -147,9 +147,9 @@ The installer recognises three `.xap` flavours
 - Desktop game-launch regressions following the .NET 8 / Avalonia 11.3 upgrade.
 - Android target sometimes shows a white screen instead of the app UI.
 - Several patcher entries from legacy WPR are still missing — game-specific
-  errors above (`IsolatedStorageSettings2.Contains`, `GamerProfile.GetGamerPicture`,
-  `LeaderboardReader.TotalLeaderboardSize`, etc.) are usually missing shims, not
-  bugs in the runner itself.
+  errors above (`IsolatedStorageSettings2.Contains`,
+  `GamerProfile.GetGamerPicture`, etc.) are usually missing shims, not bugs
+  in the runner itself.
 - Silverlight runtime: only a handful of controls + the Panorama/Pivot machine
   have been implemented; `LongListSelector`, `WrapPanel`, `PhoneTextBox`,
   `PerformanceProgressBar`, `GestureService` / `GestureListener` and several

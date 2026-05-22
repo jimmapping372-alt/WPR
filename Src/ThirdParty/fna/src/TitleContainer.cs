@@ -82,7 +82,7 @@ namespace Microsoft.Xna.Framework
 				// case (LoadLevel("MainMenu") → Content/Scenes/MainMenu.xnb if present,
 				// LoadLevel("Veins_…") → Content/Scenes/Veins_….xnb) without affecting
 				// games that don't use this layout (the fallback file simply won't
-				// exist either, and we fall through to the same throw).
+				// exist either, and we rethrow so the caller's own catch runs).
 				string sep = Path.DirectorySeparatorChar.ToString();
 				string altRel = null;
 				string contentDir = "Content" + sep;
@@ -113,15 +113,23 @@ namespace Microsoft.Xna.Framework
 					}
 				}
 
-				WprDebugTrace.WriteLine($"[wpr-ex] TitleContainer.OpenStream FAILED full=\"{full}\": FileNotFoundException (no Scenes/ fallback either)");
+				// Rethrow so games that do `try { OpenStream("foo.en-GB") } catch { OpenStream("foo") }`
+				// (a very common WP7 localization-fallback idiom — Castlevania Puzzle's
+				// DashResourceProvider.getLocalizedBinary is the motivating case) actually
+				// see the exception. Returning null here silently breaks the fallback
+				// path and the resulting BinaryReader(null) blows up inside Game.Update,
+				// which Game.Tick swallows, leaving the user staring at a working UI
+				// whose buttons appear to do nothing.
+				WprDebugTrace.WriteLine($"[wpr-ex] TitleContainer.OpenStream FAILED full=\"{full}\": FileNotFoundException (no Scenes/ fallback either) — rethrowing");
 				Debug.WriteLine("[ex] Exception : File not found: " + full);
+				throw;
 			}
 			catch (Exception ex)
 			{
-				WprDebugTrace.WriteLine($"[wpr-ex] TitleContainer.OpenStream FAILED full=\"{full}\": {ex.GetType().Name}: {ex.Message}");
+				WprDebugTrace.WriteLine($"[wpr-ex] TitleContainer.OpenStream FAILED full=\"{full}\": {ex.GetType().Name}: {ex.Message} — rethrowing");
 				Debug.WriteLine("[ex] Exception : " + ex.Message);
+				throw;
 			}
-			return default;
 		}
 
 		#endregion

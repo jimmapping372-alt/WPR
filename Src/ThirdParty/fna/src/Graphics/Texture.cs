@@ -52,7 +52,12 @@ namespace Microsoft.Xna.Framework.Graphics
 		{
 			if (!IsDisposed)
 			{
-				if (GraphicsDevice != null)
+				// Skip the native dispose if the GraphicsDevice has already been disposed —
+				// GLDevice is a freed pointer at that point and FNA3D_AddDisposeTexture would
+				// AV. This is the finalizer-after-shutdown race: a Texture that's GC-unreachable
+				// before GraphicsDevice.Dispose runs gets skipped by its WeakReference walk
+				// (Target is null) and then finalized later, after FNA3D_DestroyDevice.
+				if (GraphicsDevice != null && !GraphicsDevice.IsDisposed)
 				{
 					GraphicsDevice.Textures.RemoveDisposedTexture(this);
 					GraphicsDevice.VertexTextures.RemoveDisposedTexture(this);

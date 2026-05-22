@@ -6,7 +6,7 @@ using WPR.Common;
 
 namespace Microsoft.Xna.Framework.GamerServices
 {
-    public class LeaderboardReader
+    public class LeaderboardReader : IDisposable
     {
         private ReadOnlyCollection<LeaderboardEntry>? _Entries;
         public ReadOnlyCollection<LeaderboardEntry>? Entries => this._Entries;
@@ -15,6 +15,17 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             _Entries = new ReadOnlyCollection<LeaderboardEntry>(new List<LeaderboardEntry>());
         }
+
+        // Empty-leaderboard stub surface. The game treats this reader as "no scores
+        // available": no further pages, nothing to sync, an empty entries collection.
+        public bool CanPageDown => false;
+        public bool CanPageUp => false;
+        public bool IsDisposed { get; private set; }
+        public bool IsSynchronizedWithLiveServer => false;
+        public LeaderboardIdentity Leaderboard { get; internal set; }
+        public int PageSize => 0;
+        public int PageStart => 0;
+        public int TotalLeaderboardSize => 0;
 
         public IAsyncResult BeginPageDown(AsyncCallback callback, object asyncState)
         {
@@ -51,15 +62,13 @@ namespace Microsoft.Xna.Framework.GamerServices
             return StubUtils.ForeverTask;
         }
 
-        //public IAsyncResult TotalLeaderboardSize()
-        //{
-        //    return StubUtils.ForeverTask;
-        //}
+        public void EndPageDown(IAsyncResult result) { }
+        public void EndPageUp(IAsyncResult result) { }
+        public static LeaderboardReader EndRead(IAsyncResult result) => new LeaderboardReader();
 
+        public void PageDown() { }
+        public void PageUp() { }
 
-        public Int32 TotalLeaderboardSize()
-        {
-            return 3;
-        }
+        public void Dispose() { IsDisposed = true; }
     }
 }

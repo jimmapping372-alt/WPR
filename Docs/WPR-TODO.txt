@@ -41,6 +41,3 @@ System.MissingMethodException
    at Microsoft.Xna.Framework.GamerServices.SignedInGamer.<>c__DisplayClass8_0.<add_SignedIn>b__0(Task previous) in C:\Users\Admin\source\repos\!GameDev\WPR-0.0.16-dev\Src\Core\Microsoft.Xna.Framework.GamerServices\SignedInGamer.cs:line 42
    at System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop(Thread threadPoolThread, ExecutionContext executionContext, ContextCallback callback, Object state)
 
-Dig It
-Method not found: 'Int32 Microsoft.Xna.Framework.GamerServices.LeaderboardReader.get_TotalLeaderboardSize()'.
-
