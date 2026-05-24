@@ -20,16 +20,6 @@ namespace Microsoft.Xna.Framework.GamerServices
 
         public static bool IsInitialized => true;
 
-        public static IntPtr WindowHandle
-        {
-            get
-            {
-                throw new NotImplementedException();
-            }
-            set
-            {
-                throw new NotImplementedException();
-            }
-        }
+        public static IntPtr WindowHandle { get; set; }
     }
 }

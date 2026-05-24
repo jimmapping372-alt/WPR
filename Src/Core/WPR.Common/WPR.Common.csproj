@@ -27,4 +27,15 @@
     <ProjectReference Include="$(SolutionDir)\ThirdParty\DesktopNotifications\DesktopNotifications\DesktopNotifications.csproj" />
   </ItemGroup>
 
+  <!-- Default gamer-picture choices (the 9 stock WP7 avatars). Lives at the
+       solution root in Src\GamerPictures\; embedded here so both the settings
+       UI (thumbnail strip) and GamerServices (GamerProfile.GetGamerPicture)
+       can read them by ID via WPR.Common.GamerPictureDefaults. LogicalName
+       collapses to a flat WPR.Common.GamerPictures.<id>.png scheme. -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(SolutionDir)\GamerPictures\*.png">
+      <LogicalName>WPR.Common.GamerPictures.%(Filename).png</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
 </Project>

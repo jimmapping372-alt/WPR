@@ -124,7 +124,20 @@ namespace Microsoft.Xna.Framework.GamerServices
 
                 if (achievementStored.Count == 0)
                 {
-                    AchievementCollection collection = await TrueAchievements.Scraper.QueryAchievements(Application.Current!.ProductId!);
+                    // Scraper can throw — Kinectimals (5a3f9c59...) hits 403 because
+                    // its mapping in ProductIdUrl.json is missing/stale, and the raw
+                    // HttpRequestException was previously rethrown synchronously
+                    // through EndGetAchievements on every Game.Update tick, locking
+                    // the splash. Degrade to an empty collection on any failure so
+                    // the game can advance past sign-in.
+                    AchievementCollection collection;
+                    try { collection = await TrueAchievements.Scraper.QueryAchievements(Application.Current!.ProductId!); }
+                    catch (Exception ex)
+                    {
+                        Trace.WriteLine($"[wpr-trace] BeginGetAchievements: scraper failed, returning empty collection: {ex.Message}");
+                        collection = new AchievementCollection();
+                    }
+
                     if (collection.Count != 0)
                     {
                         await AchievementContext.Current!.Achievements!.AddRangeAsync(collection.ToArray());

@@ -9,6 +9,7 @@
       <ContextMenu>
         <MenuItem Header="Run" Command="{Binding RunAppCommand}" IsVisible="{Binding IsInstalled}"/>
         <MenuItem Header="Install" Command="{Binding InstallAppCommand}" IsVisible="{Binding IsAvailable}"/>
+        <MenuItem Header="Edit..." Command="{Binding EditAppCommand}" IsVisible="{Binding IsInstalled}"/>
         <MenuItem Header="Uninstall" Command="{Binding UninstallAppCommand}" IsVisible="{Binding IsInstalled}"/>
       </ContextMenu>
     </Grid.ContextMenu>

@@ -41,31 +41,38 @@ namespace WPR.WindowsCompability
                 }
             }
 
-            // If the caller is in a collectible ALC (the per-launch user ALC set up by
-            // ApplicationLaunch.Start) and the type is assembly-qualified, resolve the
-            // assembly through that ALC directly. Falling through to Type.GetType makes
-            // the CLR use this method's assembly (WPR.WindowsCompability — non-collectible,
-            // Default ALC) as the requesting assembly, and the binder then rejects loading
-            // the user assembly with "A non-collectible assembly may not reference a
-            // collectible assembly" (FileLoadException 0x80131515). Asteroids Deluxe hits
-            // this from Krome.GameRoom.UI.Screens.InGameScreenData.
+            // If the type is assembly-qualified, search every loaded ALC for an assembly
+            // matching the simple name and look the type up via Assembly.GetType — a pure
+            // managed lookup that doesn't trigger the CLR's cross-ALC collectibility
+            // check. Falling through to Type.GetType has the binder treat *some* assembly
+            // up the stack as the "requesting assembly":
+            //
+            //  - When the caller is the main user DLL (collectible userAlc), Type.GetType
+            //    sees this method's assembly (WPR.WindowsCompability — non-collectible,
+            //    Default ALC) and rejects loading the user assembly back into Default ALC.
+            //  - When the caller is a SIBLING library DLL (e.g. Krome.dll, loaded into
+            //    Default ALC by design — see ApplicationLaunch.cs static ctor), and the
+            //    target type lives in the main collectible user DLL (e.g. AsteroidsDeluxe),
+            //    Type.GetType again routes through Default ALC's resolver, which returns
+            //    the userAlc-loaded assembly, and the CLR rejects the resulting Default→
+            //    userAlc reference. The Krome→AsteroidsDeluxe crash is this case.
+            //
+            // Searching AssemblyLoadContext.All catches both: we hand back the right
+            // Assembly object and call .GetType on it directly, bypassing the binder.
             int commaIdx = typeName.IndexOf(',');
             if (commaIdx >= 0)
             {
-                AssemblyLoadContext? callerAlc =
-                    AssemblyLoadContext.GetLoadContext(Assembly.GetCallingAssembly());
-                if (callerAlc != null && callerAlc != AssemblyLoadContext.Default)
-                {
-                    string typeOnly = typeName.Substring(0, commaIdx).Trim();
-                    string asmSimpleName = typeName.Substring(commaIdx + 1).Trim().Split(',')[0].Trim();
+                string typeOnly = typeName.Substring(0, commaIdx).Trim();
+                string asmSimpleName = typeName.Substring(commaIdx + 1).Trim().Split(',')[0].Trim();
 
-                    foreach (var asm in callerAlc.Assemblies)
+                foreach (var alc in AssemblyLoadContext.All)
+                {
+                    foreach (var asm in alc.Assemblies)
                     {
                         if (string.Equals(asm.GetName().Name, asmSimpleName, StringComparison.OrdinalIgnoreCase))
                         {
                             var t = asm.GetType(typeOnly, throwOnError: false);
                             if (t != null) return t;
-                            break;
                         }
                     }
                 }

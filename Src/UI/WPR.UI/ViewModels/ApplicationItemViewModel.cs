@@ -25,9 +25,13 @@ namespace WPR.UI.ViewModels
         public ReactiveCommand<Unit, Unit> RunAppCommand { get; }
         public ReactiveCommand<Unit, Unit> UninstallAppCommand { get; }
         public ReactiveCommand<Unit, Unit> InstallAppCommand { get; }
+        public ReactiveCommand<Unit, Unit> RepatchAppCommand { get; }
+        public ReactiveCommand<Unit, Unit> EditAppCommand { get; }
 
         public event EventHandler<ApplicationItemViewModel>? UninstallRequested;
         public event EventHandler<ApplicationItemViewModel>? InstallRequested;
+        public event EventHandler<ApplicationItemViewModel>? RepatchRequested;
+        public event EventHandler<ApplicationItemViewModel>? EditRequested;
 
         public ApplicationItemViewModel(Application app)
         {
@@ -35,6 +39,8 @@ namespace WPR.UI.ViewModels
             RunAppCommand = ReactiveCommand.Create(RunApp);
             UninstallAppCommand = ReactiveCommand.Create(UninstallApp);
             InstallAppCommand = ReactiveCommand.Create(() => { });
+            RepatchAppCommand = ReactiveCommand.Create(RepatchApp);
+            EditAppCommand = ReactiveCommand.Create(EditApp);
         }
 
         public ApplicationItemViewModel(string xapFilePath, ApplicationPreview preview)
@@ -44,6 +50,8 @@ namespace WPR.UI.ViewModels
             RunAppCommand = ReactiveCommand.Create(() => { });
             UninstallAppCommand = ReactiveCommand.Create(() => { });
             InstallAppCommand = ReactiveCommand.Create(InstallApp);
+            RepatchAppCommand = ReactiveCommand.Create(() => { });
+            EditAppCommand = ReactiveCommand.Create(() => { });
         }
 
         /// <summary>
@@ -59,6 +67,8 @@ namespace WPR.UI.ViewModels
             RunAppCommand = ReactiveCommand.Create(() => { });
             UninstallAppCommand = ReactiveCommand.Create(() => { });
             InstallAppCommand = ReactiveCommand.Create(() => { });
+            RepatchAppCommand = ReactiveCommand.Create(() => { });
+            EditAppCommand = ReactiveCommand.Create(() => { });
 
             // Re-raise PropertyChanged for our Progress when the installer ticks.
             _InstallingProgressSub = installing.WhenAnyValue(i => i.Progress)
@@ -162,6 +172,33 @@ namespace WPR.UI.ViewModels
         private void InstallApp()
         {
             InstallRequested?.Invoke(this, this);
+        }
+
+        private void RepatchApp()
+        {
+            RepatchRequested?.Invoke(this, this);
+        }
+
+        private void EditApp()
+        {
+            EditRequested?.Invoke(this, this);
+        }
+
+        /// <summary>
+        /// Push PropertyChanged for the user-editable detail fields so the
+        /// listing and hero pane refresh after an edit dialog writes new
+        /// values onto the underlying <see cref="Application"/>. Only the
+        /// installed entry path is editable — the preview/installing constructors
+        /// have no DB row to update.
+        /// </summary>
+        public void NotifyEdited()
+        {
+            this.RaisePropertyChanged(nameof(Name));
+            this.RaisePropertyChanged(nameof(Description));
+            this.RaisePropertyChanged(nameof(Author));
+            this.RaisePropertyChanged(nameof(Publisher));
+            this.RaisePropertyChanged(nameof(Version));
+            this.RaisePropertyChanged(nameof(Tooltip));
         }
     }
 }

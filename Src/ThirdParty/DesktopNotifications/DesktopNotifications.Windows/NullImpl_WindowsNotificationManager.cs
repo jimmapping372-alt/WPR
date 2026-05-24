@@ -9,7 +9,8 @@ namespace DesktopNotifications.Windows
     {
         public static WindowsApplicationContext FromCurrentProcess(
             string? customName = null,
-            string? appUserModelId = null)
+            string? appUserModelId = null,
+            string? iconPath = null)
         {
             throw new PlatformNotSupportedException();
         }

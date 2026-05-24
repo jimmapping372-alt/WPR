@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.ReactiveUI;
 using WPR.UI.ViewModels;
+using WPR.UI.Views;
 using ReactiveUI;
 using System;
 using System.Collections.Generic;
@@ -53,8 +54,49 @@ namespace WPR.UI.Pages
             }));
 
             vm.InstallRequested += OnDiscoveredAppInstallRequested;
+            vm.EditRequested += OnAppEditRequested;
 
             this.Get<Button>("addNewAppButton").Click += AddNewAppButton_Click;
+        }
+
+        private async void OnAppEditRequested(object? sender, ApplicationItemViewModel appItem)
+        {
+            if (appItem?.Model == null) return;
+
+            var dialog = new EditApplicationDialog();
+            dialog.SetInitialValues(appItem.Model);
+
+            EditApplicationResult? result;
+            try
+            {
+                result = await dialog.ShowDialogAsync(GetWindow());
+            }
+            catch (Exception ex)
+            {
+                await MessageBoxUtils.ShowSelectableErrorAsync(
+                    title: Properties.Resources.AppRunError,
+                    body: ex.ToString());
+                return;
+            }
+
+            if (result == null) return;
+
+            try
+            {
+                await ViewModel!.SaveApplicationEditAsync(
+                    appItem,
+                    name: result.Name,
+                    description: result.Description,
+                    author: result.Author,
+                    publisher: result.Publisher,
+                    version: result.Version);
+            }
+            catch (Exception ex)
+            {
+                await MessageBoxUtils.ShowSelectableErrorAsync(
+                    title: Properties.Resources.AppRunError,
+                    body: ex.ToString());
+            }
         }
 
         private async void AddNewAppButton_Click(object? sender, RoutedEventArgs e)

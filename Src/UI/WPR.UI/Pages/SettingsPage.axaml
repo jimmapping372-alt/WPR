@@ -31,6 +31,52 @@
 							<ColumnDefinition Width="160" />
 							<ColumnDefinition Width="Auto" />
 							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="Auto" />
+							<ColumnDefinition Width="Auto" />
+						</Grid.ColumnDefinitions>
+						<Label Grid.Column="0" Padding="0,0,10,0"
+						       VerticalContentAlignment="Center"
+						       Content="{x:Static p:Resources.GamerPicture}"
+						       Foreground="White"/>
+						<Border Grid.Column="1"
+						        Width="48" Height="48"
+						        Margin="0,0,10,0"
+						        CornerRadius="3"
+						        BorderBrush="#7FFFFFFF" BorderThickness="1"
+						        Background="#33FFFFFF">
+							<Image Name="gamerPictureImage" Stretch="UniformToFill"/>
+						</Border>
+						<TextBlock Name="gamerPicturePathText"
+						           Grid.Column="2"
+						           VerticalAlignment="Center"
+						           TextTrimming="CharacterEllipsis"
+						           Foreground="#BFFFFFFF"
+						           Text="{x:Static p:Resources.GamerPictureNone}"/>
+						<Button Name="gamerPictureBrowseBtn"
+						        Grid.Column="3"
+						        Margin="10,0,0,0"
+						        Content="{x:Static p:Resources.GamerPictureBrowse}"/>
+						<Button Name="gamerPictureClearBtn"
+						        Grid.Column="4"
+						        Margin="6,0,0,0"
+						        Content="{x:Static p:Resources.GamerPictureClear}"/>
+					</Grid>
+					<TextBlock Text="{x:Static p:Resources.GamerPictureHint}"
+					           Foreground="#BFFFFFFF" FontSize="11" TextWrapping="Wrap"
+					           Margin="160,0,0,0"/>
+
+					<!-- Default avatars strip — populated programmatically from
+					     WPR.Common.GamerPictureDefaults in code-behind. Each
+					     thumbnail is a clickable button; selecting one sets the
+					     config to default:<id>. -->
+					<StackPanel Orientation="Horizontal" Margin="160,4,0,0" Spacing="6"
+					            Name="gamerPictureDefaultsPanel"/>
+
+					<Grid VerticalAlignment="Center">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="160" />
+							<ColumnDefinition Width="Auto" />
+							<ColumnDefinition Width="*" />
 						</Grid.ColumnDefinitions>
 						<Label Grid.Column="0" Padding="0,0,10,0"
 						       VerticalContentAlignment="Center"

@@ -174,7 +174,7 @@ namespace WPR
                     {
                         if (Directory.Exists(productStoreFolder))
                         {
-                            Directory.Delete(productStoreFolder, true);
+                            await DeleteInstallFolderAsync(productStoreFolder);
                         }
                         ApplicationContext.Current.Applications!.Remove(existingApp[0]);
                         await ApplicationContext.Current.SaveChangesAsync();
@@ -182,6 +182,15 @@ namespace WPR
                     {
                         return ( ApplicationInstallError.Canceled, app, dataFolderProduct );
                     }
+                }
+                else if (Directory.Exists(productStoreFolder))
+                {
+                    // No DB record but the folder is present — orphaned from a previous
+                    // half-uninstall (e.g. Mirror's Edge: the user removed the DB row but a
+                    // locked DLL prevented the folder from being deleted at the time).
+                    // Clear it now so the extract below doesn't trip over a leftover file
+                    // that's been freed since.
+                    await DeleteInstallFolderAsync(productStoreFolder);
                 }
 
                 // Normalize whitespace: WP8 manifests use values like "Modern Native" with a space
@@ -354,15 +363,15 @@ namespace WPR
                             app?.ProductId ?? "",
                             app?.Name ?? "");
 
-                        // XNA / GamerServices apps: scrape the TrueAchievements catalogue
-                        // for this product and seed AchievementContext with all entries
-                        // marked locked. Lets the WPR UI show the full achievement list
-                        // immediately, and — more importantly — guarantees rows exist
-                        // by the time the game calls AwardAchievement, which only flips
-                        // IsEarned on rows that are already present.
-                        // Best-effort; the existing lazy path in SignedInGamer.BeginGetAchievements
-                        // still works if this fails. We block on the task so the install
-                        // pipeline completes deterministically.
+                        // XNA / GamerServices apps: extract the achievement catalogue
+                        // from the game's own assemblies / content (XML catalogue in
+                        // Content/xml/, IL string literals, asset filenames) and seed
+                        // AchievementContext with all entries marked locked. Lets the
+                        // WPR UI show the full achievement list immediately, and —
+                        // more importantly — guarantees rows exist by the time the
+                        // game calls AwardAchievement, which only flips IsEarned on
+                        // rows that are already present. Best-effort; we block on the
+                        // task so the install pipeline completes deterministically.
                         try { XnaAchievementSeeder.SeedAsync(app?.ProductId ?? "", app?.Name ?? "", appDataFolder).GetAwaiter().GetResult(); }
                         catch (Exception ex)
                         {
@@ -440,6 +449,170 @@ namespace WPR
             }
 
             return ApplicationInstallError.None;
+        }
+
+        /// <summary>
+        /// Remove the DB row for <paramref name="app"/> and best-effort delete its install
+        /// folder under <c>%LocalAppData%\WPR\AppData\&lt;ProductId&gt;</c>. The folder
+        /// delete is wrapped in <see cref="DeleteInstallFolderAsync"/> which retries through
+        /// transient locks. If the folder can't be deleted (a previous launch leaked an
+        /// AssemblyLoadContext that's still pinning a DLL) we leave it on disk — the next
+        /// install will clear leftover files itself (see <see cref="CreateApplicationEntryAndExtract"/>).
+        /// </summary>
+        public static async Task<bool> UninstallAsync(Application app)
+        {
+            if (app == null) return false;
+
+            string productTrimmed = app.ProductId.Trim('{').Trim('}');
+            string installFolder = Path.Combine(
+                Configuration.Current!.DataPath(Application.DataStoreFolder),
+                productTrimmed);
+
+            bool folderGone = true;
+            if (Directory.Exists(installFolder))
+            {
+                folderGone = await DeleteInstallFolderAsync(installFolder);
+                if (!folderGone)
+                {
+                    Log.Warn(LogCategory.AppInstall,
+                        $"Uninstall: install folder for {app.Name} ({app.ProductId}) could " +
+                        $"not be deleted (files still locked). The DB row will still be removed; " +
+                        $"the next install will clean the folder.");
+                }
+            }
+
+            ApplicationContext.Current.Applications!.Remove(app);
+            await ApplicationContext.Current.SaveChangesAsync();
+            return folderGone;
+        }
+
+        /// <summary>
+        /// Re-run the patcher on an already-installed app without re-extracting from the XAP.
+        /// Walks the install dir restoring <c>*.dll</c> from each <c>*.dll.original</c> sidecar
+        /// (the patcher writes these on first install — see <see cref="ApplicationPatcher.PatchDll"/>),
+        /// then invokes <see cref="ApplicationPatcher.Patch"/> which produces fresh <c>.original</c>
+        /// files from the restored DLLs and overwrites the in-place copies with newly-patched IL.
+        /// Updates <see cref="Application.PatchedVersion"/> on success.
+        /// </summary>
+        public static async Task<ApplicationInstallError> RepatchAsync(
+            Application app,
+            Action<int> progressSet,
+            CancellationToken cancelToken)
+        {
+            try
+            {
+                string productTrimmed = app.ProductId.Trim('{').Trim('}');
+                string installFolder = Path.Combine(
+                    Configuration.Current!.DataPath(Application.DataStoreFolder),
+                    productTrimmed);
+
+                if (!Directory.Exists(installFolder))
+                {
+                    Log.Error(LogCategory.AppInstall,
+                        $"Repatch: install folder missing for {app.Name} ({app.ProductId}): {installFolder}");
+                    return ApplicationInstallError.UnexpectedError;
+                }
+
+                progressSet(0);
+
+                // 1) Restore every patched DLL from its .original sidecar. If there's no
+                //    sidecar, the file wasn't patched (e.g. it was a passthrough or got
+                //    added after install) — leave it alone. After this pass the install
+                //    dir is in the same state it was right after extract.
+                await Task.Run(() =>
+                {
+                    string[] originals = Directory.GetFiles(installFolder, "*.dll.original", SearchOption.AllDirectories);
+                    int total = originals.Length;
+                    int done = 0;
+                    foreach (string original in originals)
+                    {
+                        if (cancelToken.IsCancellationRequested) return;
+                        string dll = original.Substring(0, original.Length - ".original".Length);
+                        try
+                        {
+                            File.Move(original, dll, overwrite: true);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Warn(LogCategory.AppInstall,
+                                $"Repatch: failed to restore {Path.GetFileName(dll)} from .original: {ex.Message}");
+                        }
+                        done++;
+                        progressSet(total == 0 ? 30 : (int)(done * 30.0 / total));
+                    }
+                }, cancelToken);
+
+                if (cancelToken.IsCancellationRequested) return ApplicationInstallError.Canceled;
+
+                // 2) Re-run the patcher. It writes new .original sidecars from the restored
+                //    inputs and overwrites the in-place DLLs with newly-patched IL.
+                await Task.Run(() =>
+                {
+                    ApplicationPatcher patcher = new ApplicationPatcher();
+                    patcher.Patch(
+                        installFolder,
+                        progress => progressSet(30 + (int)(progress * 0.7)),
+                        cancelToken);
+                }, cancelToken);
+
+                if (cancelToken.IsCancellationRequested) return ApplicationInstallError.Canceled;
+
+                // 3) Stamp the new patcher version on the DB row so the UI can tell whether
+                //    a reinstall is still needed for any future patcher changes.
+                app.PatchedVersion = ApplicationPatcher.Version;
+                ApplicationContext.Current.Applications!.Update(app);
+                await ApplicationContext.Current.SaveChangesAsync();
+
+                progressSet(100);
+                return ApplicationInstallError.None;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(LogCategory.AppInstall, $"Repatch failed for {app.Name}: {ex}");
+                return ApplicationInstallError.PatchFailed;
+            }
+        }
+
+        /// <summary>
+        /// Best-effort recursive delete with retries. Each pass calls <see cref="GC.Collect"/>
+        /// before retrying — that runs finalizers and releases any leaked AssemblyLoadContext
+        /// file handles that a previous game launch may have left holding a .dll open. Returns
+        /// true if the folder is gone (or was already missing); false if it's still there
+        /// after every retry.
+        /// </summary>
+        private static async Task<bool> DeleteInstallFolderAsync(string folder)
+        {
+            if (!Directory.Exists(folder)) return true;
+
+            // 5 attempts × 200ms ≈ 1 second of polling. Past that, the lock is almost
+            // certainly held by something we can't influence (an external scanner, a
+            // long-running file watcher, the user's own AV) and waiting longer won't help.
+            int[] waits = { 0, 100, 200, 400, 800 };
+            for (int i = 0; i < waits.Length; i++)
+            {
+                if (waits[i] > 0) await Task.Delay(waits[i]);
+                if (i > 0)
+                {
+                    // Force the previous launch's ALC to actually unload — finalizers free
+                    // mapped file handles.
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                    GC.Collect();
+                }
+                try
+                {
+                    Directory.Delete(folder, recursive: true);
+                    return true;
+                }
+                catch (IOException) when (i < waits.Length - 1) { /* retry */ }
+                catch (UnauthorizedAccessException) when (i < waits.Length - 1) { /* retry */ }
+                catch (Exception ex)
+                {
+                    Log.Warn(LogCategory.AppInstall, $"Directory.Delete('{folder}') attempt {i + 1}: {ex.Message}");
+                    if (i == waits.Length - 1) return false;
+                }
+            }
+            return !Directory.Exists(folder);
         }
     }
 }

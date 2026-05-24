@@ -165,6 +165,63 @@ that isn't part of the change itself:
 - **`obj/` and `bin/`**: leave these. They're normal incremental-build
   artifacts; removing them would force a rebuild the user didn't ask for.
 
+## Building the Android leg (WPR.UI.Android)
+
+The Android project builds today, but **not via Rider with default config** — it needs
+the user-local .NET 8 SDK and a non-default Android SDK path. Verified working CLI recipe
+(no admin elevation required):
+
+```powershell
+$env:DOTNET_ROOT       = "C:\Users\BenSl\.dotnet"
+$env:ANDROID_HOME      = "C:\Users\BenSl\AppData\Local\Android\Sdk"
+$env:ANDROID_SDK_ROOT  = $env:ANDROID_HOME
+$env:JAVA_HOME         = "C:\Program Files\Android\Android Studio\jbr"
+& "C:\Users\BenSl\.dotnet\dotnet.exe" build `
+    "Src\UI\WPR.UI.Android\WPR.UI.Android.csproj" `
+    -c Debug -maxcpucount:1 -nodeReuse:false --nologo `
+    -p:AndroidSdkDirectory="$env:ANDROID_HOME"
+```
+
+Output: `Src\UI\WPR.UI.Android\bin\Debug\net8.0-android34.0\com.wpr.android-Signed.apk` (~31 MB).
+
+### Why this is fiddly
+- **System SDK is .NET 10 only.** `C:\Program Files\dotnet` has no .NET 8 manifest, so its
+  Android workload (`36.1.x/10.0.100`) targets API 36 only — incompatible with the project's
+  `net8.0-android34.0` TFM. Restoring with the system SDK fails NU1202 on `Avalonia.Android 11.1-beta1`.
+- **User-local SDK has the right workload.** `C:\Users\BenSl\.dotnet` (`.NET 8.0.420`) has
+  the .NET 8 Android workload (`34.0.154/8.0.100`) with packs `Microsoft.Android.Ref.34` etc.
+  Invoking that `dotnet.exe` directly resolves restore correctly.
+- **android-34 platform must exist somewhere the build can find.** The build default is
+  `C:\Program Files (x86)\Android\android-sdk\platforms\android-34\android.jar` which is
+  missing. Android Studio installs API 34 into `C:\Users\BenSl\AppData\Local\Android\Sdk`
+  (per `android.sdk.path.xml`) — non-admin. Set `AndroidSdkDirectory` / `ANDROID_HOME`
+  to that user-local path.
+
+### .NET / Android API mapping (Microsoft locked these)
+- `net8.0-android*` → API **34** only. There is no `net8.0-android35.0`.
+- `net9.0-android*` → API **35** only.
+- `net10.0-android*` → API **36** only.
+
+Also: `Avalonia.Android` skipped .NET 9. Version 11.x ships only `lib/net8.0-android34.0/`;
+12.x ships only `lib/net10.0-android36.0/`. To move off API 34 you must move all the way
+to net10 + Avalonia 12.
+
+### Rider build path (not currently working)
+Rider's MSBuild only sees the system .NET 10 SDK at `C:\Program Files\dotnet`. Two ways
+to make Rider build Android:
+
+1. **Install .NET 8 SDK system-wide** (admin):
+   - Download .NET 8 SDK installer from dot.net or `winget install Microsoft.DotNet.SDK.8`.
+   - In an elevated shell: `dotnet workload install android` (with .NET 8 active via a
+     temporary global.json pinning to 8.0.x).
+   - Set `ANDROID_HOME` user env var to `C:\Users\BenSl\AppData\Local\Android\Sdk`.
+2. **Point Rider at the user-local SDK** (no admin): Settings → Build → Toolset and
+   Build → .NET CLI executable path → `C:\Users\BenSl\.dotnet\dotnet.exe`. Same
+   `ANDROID_HOME` env var as above.
+
+The project itself is fine — there's no code or csproj change needed beyond what's
+already in place. The fix lives entirely in the environment.
+
 ## Environment notes (as of 2026-05-11)
 
 - System .NET SDK: `C:\Program Files\dotnet` — **.NET 10.0.203**, Android

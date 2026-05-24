@@ -186,6 +186,36 @@ namespace WPR.UI.Properties {
             }
         }
 
+        public static string GamerPicture {
+            get {
+                return ResourceManager.GetString("GamerPicture", resourceCulture);
+            }
+        }
+
+        public static string GamerPictureHint {
+            get {
+                return ResourceManager.GetString("GamerPictureHint", resourceCulture);
+            }
+        }
+
+        public static string GamerPictureNone {
+            get {
+                return ResourceManager.GetString("GamerPictureNone", resourceCulture);
+            }
+        }
+
+        public static string GamerPictureBrowse {
+            get {
+                return ResourceManager.GetString("GamerPictureBrowse", resourceCulture);
+            }
+        }
+
+        public static string GamerPictureClear {
+            get {
+                return ResourceManager.GetString("GamerPictureClear", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Looks up a localized string similar to Gamer profile.
         /// </summary>
@@ -374,6 +404,39 @@ namespace WPR.UI.Properties {
         }
         public static string LivePreviewHint {
             get { return ResourceManager.GetString("LivePreviewHint", resourceCulture); }
+        }
+        public static string EditApp {
+            get { return ResourceManager.GetString("EditApp", resourceCulture); }
+        }
+        public static string EditAppTitle {
+            get { return ResourceManager.GetString("EditAppTitle", resourceCulture); }
+        }
+        public static string EditAppHint {
+            get { return ResourceManager.GetString("EditAppHint", resourceCulture); }
+        }
+        public static string EditAppNameLabel {
+            get { return ResourceManager.GetString("EditAppNameLabel", resourceCulture); }
+        }
+        public static string EditAppDescriptionLabel {
+            get { return ResourceManager.GetString("EditAppDescriptionLabel", resourceCulture); }
+        }
+        public static string EditAppAuthorLabel {
+            get { return ResourceManager.GetString("EditAppAuthorLabel", resourceCulture); }
+        }
+        public static string EditAppPublisherLabel {
+            get { return ResourceManager.GetString("EditAppPublisherLabel", resourceCulture); }
+        }
+        public static string EditAppVersionLabel {
+            get { return ResourceManager.GetString("EditAppVersionLabel", resourceCulture); }
+        }
+        public static string SaveButton {
+            get { return ResourceManager.GetString("SaveButton", resourceCulture); }
+        }
+        public static string CancelButton {
+            get { return ResourceManager.GetString("CancelButton", resourceCulture); }
+        }
+        public static string EditAppToolTip {
+            get { return ResourceManager.GetString("EditAppToolTip", resourceCulture); }
         }
     }
 }

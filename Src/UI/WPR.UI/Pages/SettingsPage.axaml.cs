@@ -1,8 +1,10 @@
 using Avalonia.Controls;
+using Avalonia.Media.Imaging;
 using WPR.Common;
 
 using ReactiveUI;
 using System;
+using System.IO;
 using System.Linq;
 
 using Microsoft.Xna.Framework.GamerServices;
@@ -33,6 +35,7 @@ namespace WPR.UI.Pages
                 Configuration.Current.Save();
             });
 
+            WireGamerPicturePicker();
             WireHighlightColorPicker();
 
             TextBox pathTextBox = this.Get<TextBox>("dataStoragePathText");
@@ -134,6 +137,121 @@ namespace WPR.UI.Pages
                 Configuration.Current.Save();
                 swatch.Background = pick.Brush;
             };
+        }
+
+        /// <summary>
+        /// Wires the gamer picture row: shows a preview of the currently-configured file
+        /// (or a placeholder), lets the user Browse to a new image, and Clear to remove the
+        /// selection. The chosen path is stored in <see cref="Configuration.GamerPicturePath"/>
+        /// as an absolute path and consumed by
+        /// <c>Microsoft.Xna.Framework.GamerServices.GamerProfile.GetGamerPicture()</c> at
+        /// each game's profile-fetch time, so changes here take effect on the next game launch.
+        /// </summary>
+        private void WireGamerPicturePicker()
+        {
+            Image preview = this.Get<Image>("gamerPictureImage");
+            TextBlock pathText = this.Get<TextBlock>("gamerPicturePathText");
+            Button browseBtn = this.Get<Button>("gamerPictureBrowseBtn");
+            Button clearBtn = this.Get<Button>("gamerPictureClearBtn");
+            StackPanel defaultsPanel = this.Get<StackPanel>("gamerPictureDefaultsPanel");
+
+            BuildDefaultsStrip(defaultsPanel, preview, pathText);
+            RefreshGamerPictureUi(preview, pathText);
+
+            browseBtn.Click += async (_, _) =>
+            {
+                var dlg = new OpenFileDialog
+                {
+                    AllowMultiple = false,
+                    Filters = new System.Collections.Generic.List<FileDialogFilter>
+                    {
+                        new FileDialogFilter { Name = "Images", Extensions = { "png", "jpg", "jpeg", "bmp", "gif" } },
+                        new FileDialogFilter { Name = "All files", Extensions = { "*" } }
+                    }
+                };
+                string[]? picked = await dlg.ShowAsync(GetWindow());
+                if (picked == null || picked.Length == 0) return;
+                Configuration.Current.GamerPicturePath = picked[0];
+                Configuration.Current.Save();
+                RefreshGamerPictureUi(preview, pathText);
+            };
+
+            clearBtn.Click += (_, _) =>
+            {
+                Configuration.Current.GamerPicturePath = null;
+                Configuration.Current.Save();
+                RefreshGamerPictureUi(preview, pathText);
+            };
+        }
+
+        /// <summary>
+        /// Populate the horizontal thumbnail strip with one button per bundled default
+        /// from <see cref="GamerPictureDefaults"/>. Clicking a thumbnail writes its
+        /// <c>default:&lt;id&gt;</c> token to config and refreshes the preview.
+        /// </summary>
+        private static void BuildDefaultsStrip(StackPanel panel, Image preview, TextBlock pathText)
+        {
+            foreach (string id in GamerPictureDefaults.Ids)
+            {
+                Bitmap? thumb = null;
+                using (Stream? s = GamerPictureDefaults.Open(id))
+                {
+                    if (s != null) thumb = new Bitmap(s);
+                }
+                if (thumb == null) continue;
+
+                var img = new Image { Source = thumb, Stretch = Avalonia.Media.Stretch.UniformToFill, Width = 36, Height = 36 };
+                var btn = new Button
+                {
+                    Padding = new Avalonia.Thickness(2),
+                    Background = Avalonia.Media.Brushes.Transparent,
+                    BorderBrush = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#7FFFFFFF")),
+                    BorderThickness = new Avalonia.Thickness(1),
+                    CornerRadius = new Avalonia.CornerRadius(3),
+                    Content = img,
+                    Tag = id
+                };
+                btn.Click += (_, _) =>
+                {
+                    Configuration.Current.GamerPicturePath = GamerPictureDefaults.ToConfigValue(id);
+                    Configuration.Current.Save();
+                    RefreshGamerPictureUi(preview, pathText);
+                };
+                panel.Children.Add(btn);
+            }
+        }
+
+        private static void RefreshGamerPictureUi(Image preview, TextBlock pathText)
+        {
+            string? configured = Configuration.Current.GamerPicturePath;
+
+            if (GamerPictureDefaults.IsDefault(configured))
+            {
+                string id = GamerPictureDefaults.ExtractId(configured)!;
+                using Stream? s = GamerPictureDefaults.Open(id);
+                if (s != null)
+                {
+                    preview.Source = new Bitmap(s);
+                    pathText.Text = id;
+                    return;
+                }
+            }
+            else if (!string.IsNullOrEmpty(configured) && File.Exists(configured))
+            {
+                try
+                {
+                    preview.Source = new Bitmap(configured);
+                    pathText.Text = configured;
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    Log.Warn(LogCategory.Common, $"Settings: failed to load gamer-picture preview {configured}: {ex.Message}");
+                }
+            }
+
+            preview.Source = null;
+            pathText.Text = Properties.Resources.GamerPictureNone;
         }
 
         Window GetWindow() => VisualRoot as Window ?? throw new NullReferenceException("Invalid Owner");

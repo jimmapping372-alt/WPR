@@ -5,12 +5,15 @@ using System.Runtime.Loader;
 using WPR.Models;
 using WPR.Common;
 
-using Microsoft.Phone.Shell;
+using WPR.SilverlightCompability;
 using Microsoft.Xna.Framework.GamerServices;
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using WPR.XnaCompability;
 
@@ -64,6 +67,20 @@ namespace WPR
         /// </summary>
         private static string? _CurrentMainAssemblyName;
 
+        /// <summary>
+        /// User-install-folder sibling DLLs that the Default-ALC resolver has loaded into the
+        /// non-collectible Default ALC. They persist across launches (Default ALC never
+        /// unloads), so any per-launch managed statics they carry leak into the next launch
+        /// (e.g. PressPlay.FFWD's <c>Application.quitNextUpdate</c> flag would cause the
+        /// next launch's <c>Application.Update</c> to call <c>Game.Exit()</c> at frame 0 and
+        /// silently close the window). <see cref="ResetWprSingletons"/> walks this list and
+        /// clears writable value-type statics + collection contents — see that method for
+        /// the exact reset policy. Never cleared (the assemblies stay loaded for the rest
+        /// of the WPR process; we just keep adding new ones as we encounter them).
+        /// </summary>
+        private static readonly List<Assembly> _DefaultAlcUserSiblings = new List<Assembly>();
+        private static readonly object _DefaultAlcUserSiblingsLock = new object();
+
         static ApplicationLaunch()
         {
             // Default-ALC fallback for assemblies that live in the user game's install dir.
@@ -105,9 +122,27 @@ namespace WPR
                               string.Equals(name.Name, _CurrentMainAssemblyName, StringComparison.OrdinalIgnoreCase);
                 try
                 {
+                    // LoadFromStream rather than LoadFromAssemblyPath: the latter holds
+                    // an exclusive file lock on Windows for the life of the loading ALC.
+                    // Sibling DLLs go into the non-collectible Default ALC, so a path-
+                    // based load would lock the .dll until the WPR process exits —
+                    // blocking the in-place Repatch button ("File.Move .dll.original ->
+                    // .dll" returns "Access to the path is denied" for every sibling).
+                    // Stream-based loads close the file immediately after the bytes are
+                    // copied into the ALC's internal metadata heap.
                     Assembly loaded = isMain
-                        ? userAlc.LoadFromAssemblyPath(candidate)
-                        : loadContext.LoadFromAssemblyPath(candidate);
+                        ? LoadAssemblyWithoutFileLock(userAlc, candidate)
+                        : LoadAssemblyWithoutFileLock(loadContext, candidate);
+                    if (!isMain)
+                    {
+                        lock (_DefaultAlcUserSiblingsLock)
+                        {
+                            if (!_DefaultAlcUserSiblings.Contains(loaded))
+                            {
+                                _DefaultAlcUserSiblings.Add(loaded);
+                            }
+                        }
+                    }
                     WprTrace($"[wpr-resolve-default] OK   {name.FullName} -> {candidate} target={(isMain ? "user-alc" : "default-alc")} -> {loaded.FullName}");
                     return loaded;
                 }
@@ -193,7 +228,14 @@ namespace WPR
                 {
                     try
                     {
-                        var loaded = ctx.LoadFromAssemblyPath(candidate);
+                        // LoadFromStream rather than LoadFromAssemblyPath — see
+                        // matching comment in the Default.Resolving handler above.
+                        // Even though this ALC is collectible (lock released on
+                        // Unload), Unload completion is asynchronous; using a stream
+                        // load releases the file lock immediately after load so the
+                        // Repatch button works even before the ALC has actually
+                        // unloaded.
+                        var loaded = LoadAssemblyWithoutFileLock(ctx, candidate);
                         WprTrace($"[wpr-resolve-user] OK   {name.FullName} -> {candidate} -> {loaded.FullName}");
                         return loaded;
                     }
@@ -234,7 +276,10 @@ namespace WPR
             // (they're routed differently — see the static ctor).
             _CurrentMainAssemblyName = Path.GetFileNameWithoutExtension(asmPath);
             _CurrentUserAlc = alc;
-            Assembly assem = alc.LoadFromAssemblyPath(asmPath);
+            // Stream load (no file lock) — matches the policy used by both Resolving
+            // handlers above. Required so the Repatch button can rewrite the main
+            // DLL on disk after a launch even if the user ALC hasn't fully unloaded.
+            Assembly assem = LoadAssemblyWithoutFileLock(alc, asmPath);
 
             Directory.SetCurrentDirectory(folderPath);
 
@@ -274,7 +319,27 @@ namespace WPR
                 // its fields), which NREs e.g. Assassin's Creed XNAGame.
                 SignedInGamer.Reset();
 
-                Game? obj = Activator.CreateInstance(mainType!) as Game;
+                // CRITICAL: the entire launch (ctor + lifecycle + Game.Dispose) is wrapped
+                // in an outer try/finally so the teardown block at the bottom (which runs
+                // TeardownAudioState, ResetWprSingletons — including ResetSiblingRegistry
+                // that clears static dicts in Default-ALC sibling DLLs — debug-listener
+                // disposal, and the user ALC unload) ALWAYS executes, even when
+                // Activator.CreateInstance throws.
+                //
+                // Why it matters: Kinectimals' MainGame.ctor crashes on
+                // `Resource.ManagedResource<T>.s_resources.Add("BlackTex", ...)` when a
+                // prior launch in the same WPR session left that static dict populated.
+                // Without this outer try/finally, an Activator throw propagated out of
+                // the lambda entirely — no debug-listener disposal (so the wpr_game_debug.log
+                // file stayed open and the NEXT launch logged "being used by another
+                // process"), no ResetSiblingRegistry (so the dict stayed populated and
+                // EVERY subsequent launch crashed the same way), no ALC unload. One bad
+                // launch cascaded into "this game can never be launched again until WPR
+                // is restarted."
+                Game? obj = null;
+                try
+                {
+                    obj = Activator.CreateInstance(mainType!) as Game;
                 try
                 {
                     CurrentGame = obj;
@@ -409,39 +474,146 @@ namespace WPR
                     try { obj?.Dispose(); }
                     catch (Exception ex) { Log.Warn(LogCategory.AppList, $"Game.Dispose threw: {ex.Message}"); }
                 }
-
+                }  // end inner try (Activator.CreateInstance + game lifecycle)
+                finally
+                {
                 // Now safe to tear down the audio engine itself: every SoundEffectInstance has
                 // released its source voice via Content.Dispose above.
                 TeardownAudioState();
 
                 // Drop user-assembly references then unload the ALC so the .dll is freed and any
                 // statics inside the user assembly (timers, caches) can be reclaimed.
+                //
+                // Order matters here — the previous "Unload() + one GC.Collect/Wait/Collect"
+                // sequence (the MSDN naive example) wasn't sufficient for Kinectimals: its
+                // Resource.ManagedResource<T> holds a static Dictionary keyed by resource
+                // name with no Clear method, so the second launch in the same WPR process
+                // threw `ArgumentException: An item with the same key has already been added.
+                // Key: BlackTex` from inside ManagedResource<T>..ctor on Dictionary.Add. ALC
+                // unload is asynchronous and only completes when zero references reach into
+                // the ALC from outside — common pin sources here:
+                //   1. _CurrentUserAlc / _CurrentMainAssemblyName statics read by the
+                //      Default.Resolving handler;
+                //   2. the debug TraceListener — if a user-assembly type wrote to Trace,
+                //      the listener's pipeline may keep the call-site type alive;
+                //   3. JIT may pin `alc` on the calling stack frame if the unload runs
+                //      inline (only released when the method returns).
+                // Mitigations applied below in order: clear the statics, remove and dispose
+                // the trace listener, then call Unload() from a non-inlined helper while
+                // iterating GC cycles against a WeakReference until the ALC is genuinely
+                // collected (or we hit the cap and log the failure).
                 try
                 {
                     PhoneApplicationService.Current?.HandleApplicationExit();
                     ResetWprSingletons();
-                    alc.Unload();
-                    GC.Collect();
-                    GC.WaitForPendingFinalizers();
-                    GC.Collect();
+
+                    // 2 of the 3 above — remove the debug listener BEFORE Unload(). Any
+                    // Trace.WriteLine from user-assembly type init that ran during this
+                    // launch flowed through this listener; nulling it now releases those
+                    // captured frames before the ALC tries to unload.
+                    if (debugListener != null)
+                    {
+                        try
+                        {
+                            Trace.Listeners.Remove(debugListener);
+                            debugListener.Flush();
+                            debugListener.Close();
+                            debugListener.Dispose();
+                        }
+                        catch { /* best-effort: we're on the teardown path */ }
+                        debugListener = null;
+                    }
+
+                    // 1 + 3 — null the statics and call Unload() from a non-inlined helper
+                    // so the JIT can't pin `alc` on this stack frame. The helper returns a
+                    // WeakReference that we poll across GC cycles.
+                    WeakReference alcRef = BeginUserAlcUnload(alc);
+                    alc = null!;  // drop our local strong ref
+
+                    int rounds = 0;
+                    const int MaxRounds = 12;
+                    while (alcRef.IsAlive && rounds < MaxRounds)
+                    {
+                        GC.Collect();
+                        GC.WaitForPendingFinalizers();
+                        GC.Collect();
+                        rounds++;
+                    }
+
+                    if (alcRef.IsAlive)
+                    {
+                        Log.Warn(LogCategory.AppList,
+                            $"ALC failed to unload after {rounds} GC cycles. Static state " +
+                            $"from this launch will leak into the next launch of any game in " +
+                            $"this WPR session — restart WPR if the next launch hits a " +
+                            $"\"duplicate key\" / \"already added\" exception.");
+                        WprTrace($"[wpr-alc] FAILED to unload after {rounds} GC cycles — ALC still alive");
+                    }
+                    else
+                    {
+                        WprTrace($"[wpr-alc] unloaded after {rounds} GC cycle(s)");
+                    }
                 }
                 catch (Exception ex)
                 {
                     Log.Warn(LogCategory.AppList, $"ALC unload best-effort failed: {ex}");
                 }
-
-                if (debugListener != null)
-                {
-                    try
-                    {
-                        Trace.Listeners.Remove(debugListener);
-                        debugListener.Flush();
-                        debugListener.Close();
-                        debugListener.Dispose();
-                    }
-                    catch { /* best-effort: we're on the teardown path */ }
-                }
+                }  // end outer finally (ensures teardown runs even when ctor throws)
             });
+        }
+
+        /// <summary>
+        /// Non-inlined helper that null-clears the statics referencing the user ALC and
+        /// calls <c>alc.Unload()</c>. Returning a <see cref="WeakReference"/> to the ALC
+        /// lets the caller iterate GC cycles until the ALC is genuinely collected.
+        ///
+        /// <para>This MUST be a separate non-inlined method. If <c>alc.Unload()</c> were
+        /// called from <see cref="Start"/> directly, the JIT could keep <c>alc</c> rooted
+        /// on the caller's stack frame for the rest of the method body, and the subsequent
+        /// <c>GC.Collect()</c> would not free the ALC even though no real reference exists.
+        /// Crossing a method boundary forces the local out of the caller's stack-tracked
+        /// roots once this method returns.</para>
+        /// </summary>
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static WeakReference BeginUserAlcUnload(AssemblyLoadContext alc)
+        {
+            // Default.Resolving (registered in the static ctor) reads _CurrentUserAlc on
+            // every bind — until we null it, every assembly lookup pins the ALC.
+            _CurrentUserAlc = null;
+            _CurrentMainAssemblyName = null;
+
+            var weak = new WeakReference(alc);
+            alc.Unload();
+            return weak;
+        }
+
+        /// <summary>
+        /// Loads an assembly from disk WITHOUT holding a file lock for the life of
+        /// the loading ALC. <c>LoadFromAssemblyPath</c> on Windows opens the file
+        /// with FILE_SHARE_READ but no FILE_SHARE_WRITE / FILE_SHARE_DELETE, and the
+        /// handle stays open until the ALC is collected — for the Default ALC that
+        /// means forever, so a subsequent <c>File.Move</c> over the .dll (e.g. from
+        /// <see cref="ApplicationInstaller.RepatchAsync"/>'s "restore from .original"
+        /// step) returns "Access to the path is denied" for every game DLL.
+        /// <see cref="AssemblyLoadContext.LoadFromStream(Stream)"/> copies the bytes
+        /// into the ALC's internal metadata heap and closes the underlying file
+        /// stream when this method returns, so the path is immediately writable.
+        ///
+        /// <para>Side effect: <c>Assembly.Location</c> on the returned assembly is
+        /// empty string rather than the on-disk path. The shims and FNA code we
+        /// route through don't depend on Location — content loads use
+        /// <c>TitleContainer.OpenStream</c> rooted at <c>FNAPlatform.TitleLocation</c>,
+        /// type resolution uses Type.GetType against module-relative names, and the
+        /// patcher runs at install time on actual files. If a future game turns out
+        /// to call <c>Assembly.GetExecutingAssembly().Location</c>, we'd add a
+        /// patcher entry to fix that callsite rather than reverting to path-based
+        /// loads here.</para>
+        /// </summary>
+        private static Assembly LoadAssemblyWithoutFileLock(AssemblyLoadContext ctx, string path)
+        {
+            byte[] bytes = File.ReadAllBytes(path);
+            using var ms = new MemoryStream(bytes, writable: false);
+            return ctx.LoadFromStream(ms);
         }
 
         /// <summary>
@@ -564,9 +736,406 @@ namespace WPR
             }
             catch (Exception ex) { Log.Warn(LogCategory.AppList, $"ContentTypeReaderManager.contentReadersCache reset threw: {ex.Message}"); }
 
+            // Sibling DLLs (PressPlay.FFWD, similar mini-engines) were loaded into the
+            // non-collectible Default ALC and survive across launches with their per-launch
+            // managed statics intact. Concrete bug this addresses: FFWD's
+            // `Application.quitNextUpdate` is set to true when the user backs out of a game
+            // (MainMenu.OnDoQuit → Application.Quit), and the new launch's Application.Update
+            // reads it at frame 0 and immediately Exits — the XNA window closes silently with
+            // no log line.
+            //
+            // Reset is restricted to the exact (TypeName, FieldName) pairs in
+            // _PerLaunchFlagsToReset. Earlier revisions of this method walked every type in
+            // every sibling assembly to also clear collection-typed statics, but that scan
+            // implicitly triggered the cctor of every type it touched — and engine types
+            // like Fable Coin Golf's CIwAttractor have cctors that build
+            // GraphicsDevice-dependent state (a VertexBuffer via FNA3D). At
+            // ResetWprSingletons time the GraphicsDevice is already torn down, so the native
+            // FNA3D call read freed memory and raised a fatal AccessViolationException that
+            // managed try/catch couldn't contain. Only touch types we have hand-verified.
+            List<Assembly> siblings;
+            lock (_DefaultAlcUserSiblingsLock)
+            {
+                siblings = new List<Assembly>(_DefaultAlcUserSiblings);
+            }
+
+            foreach ((string typeName, string fieldName) in _PerLaunchFlagsToReset)
+            {
+                ResetNamedStaticFlag(siblings, typeName, fieldName);
+            }
+
+            // Per-launch reference-type static REGISTRIES on sibling DLLs that need
+            // explicit clearing because:
+            //   (a) the DLL was routed to the non-collectible Default ALC, so its
+            //       closed generic statics survive the user-ALC unload, AND
+            //   (b) the static collection has no Clear / Reset method that the game
+            //       itself calls between launches.
+            //
+            // Concrete bug this addresses: Kinectimals's Resource.dll defines
+            //   public class ManagedResource<T> {
+            //       private static Dictionary<string, ManagedResource<T>> s_resources = new(OrdinalIgnoreCase);
+            //       private ManagedResource(string name, string src) {
+            //           // ... no ContainsKey guard:
+            //           s_resources.Add(name, this);
+            //       }
+            //   }
+            // and the game re-runs ResourceManager.Init on every MainGame.ctor.
+            // Second launch in the same WPR session → "An item with the same key has
+            // already been added. Key: BlackTex" from inside Dictionary.Add, before
+            // Game.Run() ever fires.
+            //
+            // Why this is safer than the abandoned "walk every type, clear every
+            // collection static" scan from line 678-685 above: we target a known
+            // (Assembly, OpenGenericTypeName, FieldName) tuple, so we never touch a
+            // type whose cctor depends on a now-torn-down GraphicsDevice. The cctor
+            // for ManagedResource<T> is just `new Dictionary<>()`, which is benign.
+            foreach (KnownSiblingRegistry reg in _KnownSiblingRegistries)
+            {
+                ResetSiblingRegistry(siblings, reg);
+            }
+
             // Stop routing default-ALC resolves to this (now-unloading) user ALC.
             _CurrentUserAlc = null;
             _CurrentMainAssemblyName = null;
+        }
+
+        /// <summary>
+        /// Describes a static collection registry on a sibling DLL that needs to be
+        /// cleared between launches. <see cref="OpenGenericTypeName"/> is the open
+        /// generic that carries the static field; <see cref="DiscriminatorOpenName"/>
+        /// is a related open generic whose closed instantiations we scan for, to
+        /// discover what closed types of the registry exist (closed generic
+        /// instantiations are not directly enumerable via reflection — we infer
+        /// them from field declarations elsewhere in the loaded assemblies).
+        /// </summary>
+        private sealed record KnownSiblingRegistry(
+            string AssemblyName,
+            string OpenGenericTypeName,
+            string DiscriminatorOpenName,
+            string[] FieldNames);
+
+        private static readonly KnownSiblingRegistry[] _KnownSiblingRegistries =
+        {
+            // Kinectimals (5a3f9c59-1d30-4895-bb76-641bdd959a8c) — same Resource.dll
+            // engine library is used by other Frontier Dev. titles, so this resets
+            // anything that ships with a `Resource.ManagedResource<T>` shape.
+            new KnownSiblingRegistry(
+                AssemblyName: "Resource",
+                OpenGenericTypeName: "Resource.ManagedResource`1",
+                DiscriminatorOpenName: "Resource.ResourceTypeManager`1",
+                FieldNames: new[] { "s_resources", "s_aliases" }),
+        };
+
+        private static void ResetSiblingRegistry(List<Assembly> siblings, KnownSiblingRegistry reg)
+        {
+            try
+            {
+                // CRITICAL: a sibling DLL like Resource.dll can end up loaded into
+                // EITHER the user ALC (when Main.dll's metadata is the first thing
+                // to reference it — its load goes through alc.Resolving and lands
+                // in user ALC) OR the Default ALC (when a content reader / shim
+                // does Type.GetType("X, Resource") — the bind starts in Default ALC
+                // and our Default.Resolving routes it to Default ALC). It can even
+                // be in BOTH (two separate instances, different ALC).
+                //
+                // The previous version of this method only scanned
+                // _DefaultAlcUserSiblings, so a user-ALC-loaded Resource.dll was
+                // never cleared. With the user ALC stuck in "failed to unload"
+                // state (see the surrounding GC loop's warning), Resource.dll's
+                // static dicts persisted across launches and triggered the
+                // "duplicate key: BlackTex" cascade — even though my Default-ALC
+                // scan logged "assembly not in sibling list — skip" because the
+                // DLL wasn't actually a Default-ALC sibling at all.
+                //
+                // Fix: look across every loaded assembly with the matching name.
+                List<Assembly> allLoaded = AppDomain.CurrentDomain.GetAssemblies()
+                    .Where(a => string.Equals(a.GetName().Name, reg.AssemblyName, StringComparison.Ordinal))
+                    .ToList();
+                if (allLoaded.Count == 0)
+                {
+                    WprTrace($"[wpr-trace] ResetSiblingRegistry({reg.AssemblyName}): no matching assembly loaded in any ALC — skip.");
+                    return;
+                }
+
+                WprTrace($"[wpr-trace] ResetSiblingRegistry({reg.AssemblyName}): found {allLoaded.Count} loaded instance(s).");
+                foreach (Assembly probe in allLoaded)
+                {
+                    WprTrace($"[wpr-trace] ResetSiblingRegistry({reg.AssemblyName}): instance ALC={AssemblyLoadContext.GetLoadContext(probe)?.Name ?? "?"}, " +
+                             $"in-default-siblings={siblings.Contains(probe)}.");
+                }
+
+                // Process every instance — each has its own closed-generic
+                // instantiations and its own static dicts.
+                int grandCleared = 0;
+                int grandClosedTs = 0;
+                int grandEntries = 0;
+                foreach (Assembly asm in allLoaded)
+                {
+                    Type? openGeneric = asm.GetType(reg.OpenGenericTypeName, throwOnError: false);
+                    Type? discriminator = asm.GetType(reg.DiscriminatorOpenName, throwOnError: false);
+                    if (openGeneric == null || !openGeneric.IsGenericTypeDefinition)
+                    {
+                        WprTrace($"[wpr-trace] ResetSiblingRegistry({reg.AssemblyName}): open generic {reg.OpenGenericTypeName} not in this instance — skip.");
+                        continue;
+                    }
+                    if (discriminator == null || !discriminator.IsGenericTypeDefinition)
+                    {
+                        WprTrace($"[wpr-trace] ResetSiblingRegistry({reg.AssemblyName}): discriminator {reg.DiscriminatorOpenName} not in this instance — skip.");
+                        continue;
+                    }
+
+                    ClearOneInstance(asm, openGeneric, discriminator, reg, ref grandCleared, ref grandClosedTs, ref grandEntries);
+                }
+
+                string summary =
+                    $"ResetSiblingRegistry({reg.AssemblyName}): processed {allLoaded.Count} loaded instance(s), " +
+                    $"found {grandClosedTs} closed instantiation(s), cleared {grandCleared} collection(s) " +
+                    $"holding {grandEntries} total entries.";
+                Log.Info(LogCategory.AppList, summary);
+                WprTrace("[wpr-trace] " + summary);
+                return;
+            }
+            catch (Exception ex)
+            {
+                Log.Warn(LogCategory.AppList,
+                    $"ResetSiblingRegistry({reg.AssemblyName}) threw: {ex.Message}");
+            }
+        }
+
+        private static void ClearOneInstance(
+            Assembly asm,
+            Type openGeneric,
+            Type discriminator,
+            KnownSiblingRegistry reg,
+            ref int grandCleared,
+            ref int grandClosedTs,
+            ref int grandEntries)
+        {
+            try
+            {
+
+                // Discover closed instantiations of `openGeneric` and `discriminator`.
+                // Closed generic instantiations aren't enumerable directly via
+                // reflection, so we collect them by walking every place a Type
+                // reference can appear in the metadata: base types, interfaces,
+                // field types, property types, method return types, parameter
+                // types, and (crucially) method body local variable types. Closed
+                // Ts can also be nested inside other generics — e.g. a field
+                // declared `Dictionary<string, ManagedResource<X>>` — so we
+                // recurse into generic arguments via VisitTypeTree.
+                //
+                // Scan is restricted to assemblies that reference the open
+                // generic's assembly, so we don't churn through Avalonia / FNA /
+                // CLR types that can't possibly carry these instantiations.
+                HashSet<Type> closedTs = new HashSet<Type>();
+                Action<Type?> accumulate = type =>
+                    VisitTypeTree(type, t =>
+                    {
+                        if (!t.IsGenericType || t.IsGenericTypeDefinition) return;
+                        Type def = t.GetGenericTypeDefinition();
+                        if (def != discriminator && def != openGeneric) return;
+                        Type[] args = t.GetGenericArguments();
+                        if (args.Length == 1 && args[0] != null) closedTs.Add(args[0]);
+                    });
+
+                string targetAsmName = asm.GetName().Name ?? reg.AssemblyName;
+                List<Assembly> candidateAssemblies = new List<Assembly>();
+                foreach (Assembly a in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    if (a == asm) { candidateAssemblies.Add(a); continue; }
+                    try
+                    {
+                        foreach (AssemblyName an in a.GetReferencedAssemblies())
+                        {
+                            if (string.Equals(an.Name, targetAsmName, StringComparison.Ordinal))
+                            {
+                                candidateAssemblies.Add(a);
+                                break;
+                            }
+                        }
+                    }
+                    catch { /* dynamic assembly with no GetReferencedAssemblies — skip */ }
+                }
+
+                const BindingFlags AllMembers =
+                    BindingFlags.Public | BindingFlags.NonPublic |
+                    BindingFlags.Static | BindingFlags.Instance |
+                    BindingFlags.DeclaredOnly;
+
+                int scannedTypes = 0;
+                foreach (Assembly a in candidateAssemblies)
+                {
+                    Type[] types;
+                    try { types = a.GetTypes(); }
+                    catch (ReflectionTypeLoadException tle) { types = tle.Types.Where(t => t != null).ToArray()!; }
+                    catch { continue; }
+
+                    foreach (Type t in types)
+                    {
+                        if (t == null) continue;
+                        scannedTypes++;
+
+                        try { accumulate(t.BaseType); } catch { }
+                        try { foreach (Type i in t.GetInterfaces()) accumulate(i); } catch { }
+
+                        try
+                        {
+                            foreach (FieldInfo f in t.GetFields(AllMembers)) accumulate(f.FieldType);
+                        }
+                        catch { }
+
+                        try
+                        {
+                            foreach (PropertyInfo p in t.GetProperties(AllMembers)) accumulate(p.PropertyType);
+                        }
+                        catch { }
+
+                        try
+                        {
+                            foreach (MethodInfo m in t.GetMethods(AllMembers))
+                            {
+                                accumulate(m.ReturnType);
+                                foreach (ParameterInfo p in m.GetParameters()) accumulate(p.ParameterType);
+                                AccumulateMethodBodyLocals(m, accumulate);
+                            }
+                        }
+                        catch { }
+
+                        try
+                        {
+                            foreach (ConstructorInfo c in t.GetConstructors(AllMembers))
+                            {
+                                foreach (ParameterInfo p in c.GetParameters()) accumulate(p.ParameterType);
+                                AccumulateMethodBodyLocals(c, accumulate);
+                            }
+                        }
+                        catch { }
+                    }
+                }
+
+                grandClosedTs += closedTs.Count;
+                WprTrace($"[wpr-trace] ResetSiblingRegistry({reg.AssemblyName}): instance scan — " +
+                         $"{candidateAssemblies.Count} candidate asms / {scannedTypes} types, " +
+                         $"{closedTs.Count} closed T(s).");
+
+                foreach (Type T in closedTs)
+                {
+                    Type closed;
+                    try { closed = openGeneric.MakeGenericType(T); }
+                    catch (Exception ex)
+                    {
+                        Log.Warn(LogCategory.AppList,
+                            $"ResetSiblingRegistry: MakeGenericType({reg.OpenGenericTypeName}, {T.FullName}) threw: {ex.Message}");
+                        continue;
+                    }
+
+                    foreach (string fieldName in reg.FieldNames)
+                    {
+                        try
+                        {
+                            FieldInfo? f = closed.GetField(fieldName,
+                                BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+                            if (f == null) continue;
+                            // GetValue on a static field forces the closed generic's cctor
+                            // to run if it hasn't yet. For ManagedResource<T> that just
+                            // initialises an empty Dictionary, so the "cctor may need
+                            // GraphicsDevice" hazard from the abandoned blanket walk
+                            // doesn't apply here.
+                            object? value = f.GetValue(null);
+                            if (value is System.Collections.IDictionary d)
+                            {
+                                grandEntries += d.Count;
+                                d.Clear();
+                                grandCleared++;
+                            }
+                            else if (value is System.Collections.IList l)
+                            {
+                                grandEntries += l.Count;
+                                l.Clear();
+                                grandCleared++;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Warn(LogCategory.AppList,
+                                $"ResetSiblingRegistry: clear {closed.FullName}.{fieldName} threw: {ex.Message}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warn(LogCategory.AppList,
+                    $"ClearOneInstance({reg.AssemblyName}) threw: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Recursively walks a type's generic arguments and array element types,
+        /// invoking <paramref name="action"/> on every type it encounters. Used by
+        /// <see cref="ResetSiblingRegistry"/> to discover closed generic
+        /// instantiations nested inside other generics (e.g. find
+        /// <c>ManagedResource&lt;X&gt;</c> inside
+        /// <c>Dictionary&lt;string, ManagedResource&lt;X&gt;&gt;</c>).
+        /// </summary>
+        private static void VisitTypeTree(Type? t, Action<Type> action, HashSet<Type>? seen = null)
+        {
+            if (t == null) return;
+            seen ??= new HashSet<Type>();
+            if (!seen.Add(t)) return;
+            try { action(t); } catch { }
+            try
+            {
+                if (t.IsGenericType)
+                {
+                    foreach (Type arg in t.GetGenericArguments())
+                        VisitTypeTree(arg, action, seen);
+                }
+                if (t.IsArray) VisitTypeTree(t.GetElementType(), action, seen);
+            }
+            catch { /* dynamic / type-load oddities — best effort */ }
+        }
+
+        private static void AccumulateMethodBodyLocals(MethodBase method, Action<Type?> accumulate)
+        {
+            MethodBody? body;
+            try { body = method.GetMethodBody(); }
+            catch { return; }
+            if (body == null) return;
+            try
+            {
+                foreach (LocalVariableInfo lv in body.LocalVariables) accumulate(lv.LocalType);
+            }
+            catch { }
+        }
+
+        /// <summary>
+        /// Allow-list of (TypeName, FieldName) per-launch flags in Default-ALC sibling DLLs
+        /// that need explicit reset between launches. Only add fields confirmed to be plain
+        /// managed value types (bool/int/etc., not [ThreadStatic], not behind a property
+        /// the JIT may have inlined). Bug history:
+        ///  - PressPlay.FFWD.Application.quitNextUpdate: Tentacles silent-close on relaunch
+        ///    after a back-button quit (Application.Quit set the flag; next Application
+        ///    instance read it at frame 0 and Game.Exit'd).
+        /// </summary>
+        private static readonly (string TypeName, string FieldName)[] _PerLaunchFlagsToReset =
+        {
+            ("PressPlay.FFWD.Application", "quitNextUpdate"),
+        };
+
+        private static void ResetNamedStaticFlag(List<Assembly> siblings, string typeName, string fieldName)
+        {
+            try
+            {
+                Type? t = siblings
+                    .Select(a => a.GetType(typeName, throwOnError: false, ignoreCase: false))
+                    .FirstOrDefault(x => x != null);
+                if (t == null) return;
+                FieldInfo? f = t.GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
+                if (f == null || f.IsLiteral || f.IsInitOnly || !f.FieldType.IsValueType) return;
+                f.SetValue(null, Activator.CreateInstance(f.FieldType));
+            }
+            catch (Exception ex) { Log.Warn(LogCategory.AppList, $"ResetNamedStaticFlag({typeName}.{fieldName}) threw: {ex.Message}"); }
         }
 
         private static string BuildDiagnostics(Game? obj, Exception ex)

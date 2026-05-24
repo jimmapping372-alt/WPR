@@ -108,11 +108,41 @@ namespace Microsoft.Xna.Framework.Content
 			string externalReference = ReadString();
 			if (!String.IsNullOrEmpty(externalReference))
 			{
-				return contentManager.Load<T>(
-					MonoGame.Utilities.FileHelpers.ResolveRelativePath(assetName, externalReference)
-				);
+				try
+				{
+					return contentManager.Load<T>(
+						MonoGame.Utilities.FileHelpers.ResolveRelativePath(assetName, externalReference)
+					);
+				}
+				catch (ContentLoadException ex) when (IsMissingFile(ex))
+				{
+					// The parent XNB authored an external reference to an asset that isn't
+					// on disk. Common with WP7 XAPs that ship without their full content set
+					// (e.g. Fable Coin Golf references chapter-2 textures that the base XAP
+					// omits — the obstacles list still points to them). Treat missing
+					// referenced assets as optional and return default(T); the consumer
+					// (BasicEffectReader, SpriteFontReader, ModelReader, …) typically
+					// null-checks before using the value.
+					//
+					// We deliberately do NOT swallow at TitleContainer.OpenStream level —
+					// games like Castlevania Puzzle's DashResourceProvider depend on a
+					// thrown exception to drive their localization fallback. The split:
+					// direct OpenStream callers see the exception; embedded references
+					// inside other XNBs degrade silently.
+					WprDebugTrace.WriteLine($"[wpr-ex] ContentReader.ReadExternalReference: missing referenced asset \"{externalReference}\" from \"{assetName}\" — returning default({typeof(T).Name})");
+					return default(T);
+				}
 			}
 			return default(T);
+		}
+
+		private static bool IsMissingFile(Exception ex)
+		{
+			for (Exception cur = ex; cur != null; cur = cur.InnerException)
+			{
+				if (cur is FileNotFoundException) return true;
+			}
+			return false;
 		}
 
 		public Matrix ReadMatrix()

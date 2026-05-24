@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace WPR.SilverlightCompability
 {
@@ -14,6 +15,8 @@ namespace WPR.SilverlightCompability
     {
         private static PhoneApplicationService? _Current;
         public static PhoneApplicationService? Current => _Current;
+
+        private bool _AppActivated = false;
 
         static PhoneApplicationService()
         {
@@ -37,18 +40,119 @@ namespace WPR.SilverlightCompability
 
         public Version ContractVersion { get; } = new Version(8, 0);
 
-        public event EventHandler<LaunchingEventArgs>? Launching;
-        public event EventHandler<ClosingEventArgs>? Closing;
-        public event EventHandler<ActivatedEventArgs>? Activated;
-        public event EventHandler<DeactivatedEventArgs>? Deactivated;
+        /// <summary>
+        /// Drives the WP7 boot lifecycle from <c>ApplicationLaunch</c>. WP7 fires
+        /// <see cref="Launching"/> on a fresh launch (<paramref name="anew"/>=true) and
+        /// <see cref="Activated"/> on resume (anew=false, IsApplicationInstancePreserved=true).
+        /// Firing only Activated leaves games that initialise in their Launching handler
+        /// wedged on the splash forever (e.g. MonstaFish drawing Clear(Color.Black) and
+        /// nothing else, because its scene system never gets built).
+        /// </summary>
+        public void HandleApplicationStart(bool anew)
+        {
+#if DEBUG
+            Trace.WriteLine($"[wpr-trace] PhoneApplicationService.HandleApplicationStart(anew={anew}) firing Launching+Activated. " +
+                $"Subscribers: Launching={CountInvocations(_Launching)} Activated={CountInvocations(_Activated)}");
+#endif
+
+            if (anew)
+            {
+                try { _Launching?.Invoke(this, new LaunchingEventArgs()); }
+                catch (Exception ex)
+                {
+#if DEBUG
+                    Trace.WriteLine("[wpr-ex] PhoneApplicationService.Launching handler threw: " + ex);
+#else
+                    _ = ex;
+#endif
+                }
+            }
+
+            try { _Activated?.Invoke(this, new ActivatedEventArgs { IsApplicationInstancePreserved = !anew }); }
+            catch (Exception ex)
+            {
+#if DEBUG
+                Trace.WriteLine("[wpr-ex] PhoneApplicationService.Activated handler threw: " + ex);
+#else
+                _ = ex;
+#endif
+            }
+
+            _AppActivated = true;
+        }
+
+        public void HandleApplicationExit()
+        {
+            _Deactivated?.Invoke(this, new DeactivatedEventArgs { Reason = DeactivationReason.UserAction });
+            _Closing?.Invoke(this, new ClosingEventArgs());
+
+            // Recycle so the next launch starts with an empty subscriber list and
+            // _AppActivated=false. ApplicationLaunch.ResetWprSingletons does the same swap
+            // via reflection for the ALC-unload path.
+            _Current = new PhoneApplicationService();
+        }
+
+        private static int CountInvocations(Delegate? d) => d?.GetInvocationList().Length ?? 0;
+
+        private event EventHandler<LaunchingEventArgs>? _Launching;
+        public event EventHandler<LaunchingEventArgs>? Launching
+        {
+            add
+            {
+#if DEBUG
+                Trace.WriteLine("[wpr-trace] PhoneApplicationService.Launching += handler");
+#endif
+                _Launching += value;
+            }
+            remove { _Launching -= value; }
+        }
+
+        private event EventHandler<ActivatedEventArgs>? _Activated;
+        public event EventHandler<ActivatedEventArgs>? Activated
+        {
+            add
+            {
+#if DEBUG
+                Trace.WriteLine($"[wpr-trace] PhoneApplicationService.Activated += handler (_AppActivated={_AppActivated})");
+#endif
+                // If the app already booted past HandleApplicationStart by the time this
+                // handler attaches (rare, but happens when a page's ctor runs late),
+                // invoke the handler immediately so it doesn't sit silently missing the
+                // signal it was waiting for.
+                if (_AppActivated)
+                {
+                    value?.Invoke(this, new ActivatedEventArgs { IsApplicationInstancePreserved = false });
+                }
+                else
+                {
+                    _Activated += value;
+                }
+            }
+            remove { _Activated -= value; }
+        }
+
+        private event EventHandler<ClosingEventArgs>? _Closing;
+        public event EventHandler<ClosingEventArgs>? Closing
+        {
+            add { _Closing += value; }
+            remove { _Closing -= value; }
+        }
+
+        private event EventHandler<DeactivatedEventArgs>? _Deactivated;
+        public event EventHandler<DeactivatedEventArgs>? Deactivated
+        {
+            add { _Deactivated += value; }
+            remove { _Deactivated -= value; }
+        }
+
         public event EventHandler<RunningInBackgroundEventArgs>? RunningInBackground;
 
-        internal void RaiseLaunching() => Launching?.Invoke(this, new LaunchingEventArgs());
-        internal void RaiseClosing() => Closing?.Invoke(this, new ClosingEventArgs());
+        internal void RaiseLaunching() => _Launching?.Invoke(this, new LaunchingEventArgs());
+        internal void RaiseClosing() => _Closing?.Invoke(this, new ClosingEventArgs());
         internal void RaiseActivated(bool preserved) =>
-            Activated?.Invoke(this, new ActivatedEventArgs { IsApplicationInstancePreserved = preserved });
+            _Activated?.Invoke(this, new ActivatedEventArgs { IsApplicationInstancePreserved = preserved });
         internal void RaiseDeactivated(DeactivationReason reason) =>
-            Deactivated?.Invoke(this, new DeactivatedEventArgs { Reason = reason });
+            _Deactivated?.Invoke(this, new DeactivatedEventArgs { Reason = reason });
         internal void RaiseRunningInBackground() =>
             RunningInBackground?.Invoke(this, new RunningInBackgroundEventArgs());
     }

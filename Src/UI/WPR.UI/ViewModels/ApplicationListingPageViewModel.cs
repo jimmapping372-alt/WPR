@@ -5,6 +5,7 @@ using WPR.Models;
 using WPR.Common;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Xna.Framework.GamerServices;
 using System.Linq;
 using System.Threading;
 using System.Reactive;
@@ -24,6 +25,11 @@ namespace WPR.UI.ViewModels
         private ApplicationItemViewModel? _ChoosenApp;
         private InstallingAppViewModel? _Installing;
         private bool _IsViewingInstall;
+        private ObservableCollection<AchievementItemViewModel> _Achievements = new();
+        private int _EarnedCount;
+        private int _TotalCount;
+        private int _EarnedScore;
+        private int _TotalScore;
 
         private readonly LibraryScanner _LibraryScanner;
         private readonly List<DiscoveredApplication> _Discovered = new List<DiscoveredApplication>();
@@ -40,6 +46,7 @@ namespace WPR.UI.ViewModels
         public ReactiveCommand<Unit, Unit> ShowInstallProgressCommand;
 
         public event EventHandler<ApplicationItemViewModel>? InstallRequested;
+        public event EventHandler<ApplicationItemViewModel>? EditRequested;
 
 
         public string SearchText
@@ -69,6 +76,105 @@ namespace WPR.UI.ViewModels
                 }
                 this.RaisePropertyChanged(nameof(IsDetailEmpty));
                 this.RaisePropertyChanged(nameof(IsDetailApp));
+                _ = LoadAchievementsForChoosenAppAsync();
+            }
+        }
+
+        public ObservableCollection<AchievementItemViewModel> Achievements
+        {
+            get => _Achievements;
+            private set => this.RaiseAndSetIfChanged(ref _Achievements, value);
+        }
+
+        public int EarnedCount
+        {
+            get => _EarnedCount;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _EarnedCount, value);
+                this.RaisePropertyChanged(nameof(ProgressLabel));
+                this.RaisePropertyChanged(nameof(ProgressPercent));
+            }
+        }
+
+        public int TotalCount
+        {
+            get => _TotalCount;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _TotalCount, value);
+                this.RaisePropertyChanged(nameof(ProgressLabel));
+                this.RaisePropertyChanged(nameof(ProgressPercent));
+                this.RaisePropertyChanged(nameof(HasAchievements));
+            }
+        }
+
+        public int EarnedScore
+        {
+            get => _EarnedScore;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _EarnedScore, value);
+                this.RaisePropertyChanged(nameof(ScoreLabel));
+            }
+        }
+
+        public int TotalScore
+        {
+            get => _TotalScore;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _TotalScore, value);
+                this.RaisePropertyChanged(nameof(ScoreLabel));
+            }
+        }
+
+        public bool HasAchievements => _TotalCount > 0;
+        public string ProgressLabel => $"{_EarnedCount} / {_TotalCount}";
+        public string ScoreLabel => $"{_EarnedScore} / {_TotalScore} G";
+        public double ProgressPercent => _TotalCount == 0 ? 0 : _EarnedCount * 100.0 / _TotalCount;
+
+        private async Task LoadAchievementsForChoosenAppAsync()
+        {
+            string? productId = _ChoosenApp?.ProductId;
+            if (string.IsNullOrEmpty(productId))
+            {
+                Achievements = new ObservableCollection<AchievementItemViewModel>();
+                EarnedCount = 0;
+                TotalCount = 0;
+                EarnedScore = 0;
+                TotalScore = 0;
+                return;
+            }
+
+            try
+            {
+                List<Achievement> rows = await AchievementContext.Current!.Achievements!
+                    .AsNoTracking()
+                    .Where(a => a.OwnProductId == productId)
+                    .ToListAsync();
+
+                var ordered = rows
+                    .OrderByDescending(a => a.IsEarned)
+                    .ThenByDescending(a => a.GamerScore)
+                    .ThenBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
+                    .Select(a => new AchievementItemViewModel(a))
+                    .ToList();
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    Achievements = new ObservableCollection<AchievementItemViewModel>(ordered);
+                    TotalCount = rows.Count;
+                    EarnedCount = rows.Count(r => r.IsEarned);
+                    TotalScore = rows.Sum(r => r.GamerScore);
+                    EarnedScore = rows.Where(r => r.IsEarned).Sum(r => r.GamerScore);
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ex] ApplicationListingPage: failed to load achievements for {productId}:\n{ex}");
+                Log.Error(LogCategory.GamerServices,
+                    $"ApplicationListingPage achievement load failed for {productId}:\n{ex}");
             }
         }
 
@@ -166,6 +272,8 @@ namespace WPR.UI.ViewModels
                 {
                     appItem.UninstallRequested += OnAppUninstallRequested;
                     appItem.InstallRequested += OnAppInstallRequested;
+                    appItem.RepatchRequested += OnAppRepatchRequested;
+                    appItem.EditRequested += OnAppEditRequested;
                 }
             }
             catch (Exception ex)
@@ -188,6 +296,103 @@ namespace WPR.UI.ViewModels
             // Surface to the page, which owns the dialogs (delete-existing prompt,
             // result message box) and the file/stream lifecycle for the install flow.
             InstallRequested?.Invoke(this, appItem);
+        }
+
+        private void OnAppRepatchRequested(object? sender, ApplicationItemViewModel appItem)
+        {
+            _ = RepatchApplicationAsync(appItem);
+        }
+
+        private void OnAppEditRequested(object? sender, ApplicationItemViewModel appItem)
+        {
+            // The page owns dialogs (modal Window lifetime, MainWindow as owner).
+            // Bubble up rather than constructing the dialog from the VM.
+            EditRequested?.Invoke(this, appItem);
+        }
+
+        /// <summary>
+        /// Apply user-edited metadata onto the EF-tracked Application row and
+        /// persist. The item VM's underlying <see cref="Application"/> reference
+        /// is the same tracked instance returned by the initial query, so direct
+        /// property writes plus SaveChangesAsync are enough — no Update() call
+        /// needed. Pushes property-changed for the displayed fields so the hero
+        /// and list refresh without rebuilding the collection (which would clear
+        /// the user's current selection).
+        /// </summary>
+        public async Task SaveApplicationEditAsync(
+            ApplicationItemViewModel appItem,
+            string name,
+            string description,
+            string author,
+            string publisher,
+            string version)
+        {
+            if (appItem?.Model == null) return;
+
+            Application app = appItem.Model;
+            app.Name = name ?? string.Empty;
+            app.Description = description ?? string.Empty;
+            app.Author = author ?? string.Empty;
+            app.Publisher = publisher ?? string.Empty;
+            app.Version = version ?? string.Empty;
+
+            try
+            {
+                await ApplicationContext.Current.SaveChangesAsync();
+                appItem.NotifyEdited();
+                // Detail pane binds via ChoosenApp.Name etc. — appItem.NotifyEdited
+                // raises those. ChoosenApp itself doesn't need to flip; the
+                // bindings re-evaluate when the inner property-changed fires.
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ex] WPR.UI - ApplicationListingViewModel: failed to save edit for {app.ProductId}:\n{ex}");
+                Log.Error(LogCategory.AppList,
+                    $"Failed to save edited metadata for {app.ProductId}:\n{ex}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Re-run the patcher on an already-installed app without re-extracting from the
+        /// XAP. Cheaper than a full uninstall + reinstall when the only thing that changed
+        /// in WPR is the patcher's redirect table — and avoids the file-lock pitfalls of
+        /// blowing away the install folder while a previous launch's AssemblyLoadContext
+        /// is still finalising.
+        /// </summary>
+        private async Task RepatchApplicationAsync(ApplicationItemViewModel appItem)
+        {
+            if (appItem?.Model == null) return;
+
+            CancelSource = new CancellationTokenSource();
+            Installing = new InstallingAppViewModel(
+                new ApplicationPreview
+                {
+                    Name = appItem.Model.Name,
+                    Author = appItem.Model.Author,
+                    Publisher = appItem.Model.Publisher,
+                    Description = appItem.Model.Description,
+                    Version = appItem.Model.Version,
+                    ProductId = appItem.Model.ProductId,
+                    ApplicationType = appItem.Model.ApplicationType,
+                },
+                () => CancelSource?.Cancel());
+
+            try
+            {
+                await ApplicationInstaller.RepatchAsync(
+                    appItem.Model,
+                    progress => Dispatcher.UIThread.Post(() =>
+                    {
+                        if (Installing != null) Installing.Progress = progress;
+                    }),
+                    CancelSource.Token);
+            }
+            finally
+            {
+                Installing = null;
+                UpdateApplications();
+            }
         }
 
         public void UpdateApplications()
@@ -300,8 +505,13 @@ namespace WPR.UI.ViewModels
 
             private async Task DeleteApplicationAsync(ApplicationItemViewModel app) {
                 if (app?.Model == null) return;
-                ApplicationContext.Current.Applications.Remove(app.Model);
-                await ApplicationContext.Current.SaveChangesAsync(); // Persist the uninstall
+                // Uninstall = remove DB row AND best-effort delete the install folder.
+                // Before this, uninstall only removed the row, leaving %LocalAppData%\WPR\AppData\<id>
+                // on disk. If a previous launch had any DLL still locked (leaked ALC,
+                // antivirus, etc.) and the user tried to reinstall, the extract would
+                // crash with "process cannot access the file." The installer retries
+                // through transient locks via GC.Collect + backoff.
+                await ApplicationInstaller.UninstallAsync(app.Model);
                 Applications.Remove(app);
                 UpdateApplications();
             }

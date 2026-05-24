@@ -22,22 +22,3 @@ System.Reflection.TargetInvocationException
 
 Inner Exception 1:
 InvalidOperationException: Sequence contains no elements
-
-
-Tentacles
-
-System.MissingMethodException: 'Method not found: 'Boolean WPR.WindowsCompability.IsolatedStorageSettings2.Contains(System.String)'.'
-
-
-
-FruitNinja
-
-System.MissingMethodException
-  HResult=0x80131513
-  Message=Method not found: 'System.IO.Stream Microsoft.Xna.Framework.GamerServices.GamerProfile.GetGamerPicture()'.
-  Source=FNWP72
-  StackTrace:
-   at Mortar.TheGame.GamerSignedInCallback(Object sender, SignedInEventArgs args)
-   at Microsoft.Xna.Framework.GamerServices.SignedInGamer.<>c__DisplayClass8_0.<add_SignedIn>b__0(Task previous) in C:\Users\Admin\source\repos\!GameDev\WPR-0.0.16-dev\Src\Core\Microsoft.Xna.Framework.GamerServices\SignedInGamer.cs:line 42
-   at System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop(Thread threadPoolThread, ExecutionContext executionContext, ContextCallback callback, Object state)
-

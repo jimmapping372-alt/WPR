@@ -10,6 +10,11 @@ namespace WPR.Common
         {
             public string DataStorePath;
             public String GamerTag;
+            // Absolute path to the user-selected gamer picture (PNG/JPG). Consumed by
+            // Microsoft.Xna.Framework.GamerServices.GamerProfile.GetGamerPicture(), which is
+            // what WP7 titles like Fruit Ninja call via Texture2D.FromStream. Null/missing
+            // file → GetGamerPicture returns Stream.Null and the game falls back to no avatar.
+            public string? GamerPicturePath;
             public string? RegistrationToken;
             public string? UserEmail;
             public bool IsRegistered;
@@ -51,6 +56,12 @@ namespace WPR.Common
         {
             get => _ConfPrivate!.GamerTag;
             set => _ConfPrivate!.GamerTag = value;
+        }
+
+        public string? GamerPicturePath
+        {
+            get => _ConfPrivate!.GamerPicturePath;
+            set => _ConfPrivate!.GamerPicturePath = string.IsNullOrEmpty(value) ? null : value;
         }
 
         public string? RegistrationToken

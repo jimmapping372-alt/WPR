@@ -50,8 +50,12 @@ namespace WPR.WindowsCompability
                         }
                         catch (Exception ex)
                         {
-                            Log.Error(LogCategory.Common,
-                                $"Failed to deserialize isolated settings. Error\n {ex}");
+                            // Recoverable: settings file was truncated (typically a prior run
+                            // killed mid-Save). Start fresh; Save() now writes atomically so
+                            // this should not recur on clean shutdowns.
+                            Log.Warn(LogCategory.Common,
+                                $"Isolated settings unreadable, resetting to empty: {ex.Message}");
+                            _Settings = new Dictionary<string, object>();
                         }
 
                         if (_Settings == null)
@@ -77,10 +81,39 @@ namespace WPR.WindowsCompability
             IsolatedStorageFile? holder = _Holder ?? ApplicationSettings._Holder;
             if (holder == null) return;
 
-            using (IsolatedStorageFileStream storage = holder.CreateFile(LocalSettingsName))
+            // Collect the runtime types of stored values so DataContractSerializer can
+            // write entries whose declared slot type is `object` but whose actual value
+            // is something like `Dictionary<int,int>`. Without knownTypes, WriteObject
+            // throws SerializationException — and because WP7 games typically call Save()
+            // from inside Game.Initialize, that throw propagates up to FNA's init-time
+            // catch and leaves the game with half-initialized statics. Symptom: the
+            // SDL window opens but Draw NREs every frame (Fling black-screen-on-launch).
+            HashSet<Type> knownTypes = new HashSet<Type>();
+            foreach (object? value in _Settings.Values)
             {
-                DataContractSerializer serializer = new DataContractSerializer(typeof(Dictionary<string, object>));
-                serializer.WriteObject(storage, _Settings);
+                if (value != null)
+                {
+                    knownTypes.Add(value.GetType());
+                }
+            }
+
+            try
+            {
+                using (IsolatedStorageFileStream storage = holder.CreateFile(LocalSettingsName))
+                {
+                    DataContractSerializer serializer = new DataContractSerializer(
+                        typeof(Dictionary<string, object>), knownTypes);
+                    serializer.WriteObject(storage, _Settings);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Don't let a serialization failure escape — that's what trapped Fling.
+                // The settings live in-memory regardless; losing the on-disk copy this
+                // launch is far better than a black screen.
+                Log.Warn(LogCategory.Common,
+                    $"IsolatedStorageSettings.Save failed ({_Settings.Count} entries, " +
+                    $"knownTypes=[{string.Join(",", knownTypes)}]): {ex.Message}");
             }
         }
 
