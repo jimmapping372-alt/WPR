@@ -9,7 +9,7 @@
          so it falls back to 21. Higher SOSV triggers NETSDK1135. -->
     <SupportedOSPlatformVersion>21.0</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
-    <AvaloniaVersion>11.1-beta1</AvaloniaVersion>
+    <AvaloniaVersion>11.3.9</AvaloniaVersion>
     <ApplicationId>com.MediaExplorer.WPR</ApplicationId>
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>0.0.17</ApplicationDisplayVersion>
@@ -47,8 +47,10 @@
     <EmbedAssembliesIntoApk>True</EmbedAssembliesIntoApk>
   </PropertyGroup>
 
+  <!-- Embed assemblies so adb-installed APKs run without VS fast-deploy (.__override__). -->
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <EmbedAssembliesIntoApk>False</EmbedAssembliesIntoApk>
+    <EmbedAssembliesIntoApk>True</EmbedAssembliesIntoApk>
+    <AndroidEnableAssemblyCompression>false</AndroidEnableAssemblyCompression>
   </PropertyGroup>
 
   <ItemGroup>

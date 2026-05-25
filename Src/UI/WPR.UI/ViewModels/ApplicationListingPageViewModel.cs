@@ -216,8 +216,14 @@ namespace WPR.UI.ViewModels
 
         public ObservableCollection<ApplicationItemViewModel> Applications {
             get { return _Applications; }
-            set { this.RaiseAndSetIfChanged(ref _Applications, value); }
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _Applications, value);
+                this.RaisePropertyChanged(nameof(ShowEmptyHint));
+            }
         }
+
+        public bool ShowEmptyHint => Applications.Count == 0;
 
         public void UpdateApplicationList(string text)
         {

@@ -14,7 +14,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return GamerPrivilegeSetting.Everyone;
             }
         }
 
@@ -22,7 +22,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return true;
             }
         }
 
@@ -30,7 +30,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return GamerPrivilegeSetting.Everyone;
             }
         }
 
@@ -46,7 +46,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return true;
             }
         }
 
@@ -54,7 +54,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return GamerPrivilegeSetting.Everyone;
             }
         }
     }

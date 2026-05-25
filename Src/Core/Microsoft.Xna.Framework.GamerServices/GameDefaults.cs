@@ -15,7 +15,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return false;
             }
         }
 
@@ -23,7 +23,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return true;
             }
         }
 
@@ -31,7 +31,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return true;
             }
         }
 
@@ -39,7 +39,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return false;
             }
         }
 
@@ -47,7 +47,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return ControllerSensitivity.Medium;
             }
         }
 
@@ -55,7 +55,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return GameDifficulty.Normal;
             }
         }
 
@@ -63,7 +63,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return false;
             }
         }
 
@@ -71,7 +71,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return false;
             }
         }
 
@@ -79,7 +79,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return false;
             }
         }
 
@@ -87,7 +87,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return null;
             }
         }
 
@@ -95,7 +95,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return RacingCameraAngle.Back;
             }
         }
 
@@ -103,7 +103,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             get
             {
-                throw new NotImplementedException();
+                return null;
             }
         }
 

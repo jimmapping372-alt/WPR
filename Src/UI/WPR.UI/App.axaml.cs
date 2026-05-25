@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Styling;
 using WPR.UI.ViewModels;
 using WPR.UI.Views;
 using WPR.Common;
@@ -18,6 +19,8 @@ namespace WPR.UI
 
         public override void OnFrameworkInitializationCompleted()
         {
+            RequestedThemeVariant = ThemeVariant.Dark;
+
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 desktop.MainWindow = new MainWindowDesktop

@@ -11,16 +11,19 @@ namespace Microsoft.Devices.Sensors
         private double x;
         private double y;
         private double z;
+        private DateTimeOffset timestamp;
 
-        public AccelerometerReadingEventArgs(double x, double y, double z)
+        public AccelerometerReadingEventArgs(double x, double y, double z, DateTimeOffset? timestamp = null)
         {
             this.x = x;
             this.y = y;
             this.z = z;
+            this.timestamp = timestamp ?? DateTimeOffset.Now;
         }
 
         public double X => this.x;
         public double Y => this.y;
         public double Z => this.z;
+        public DateTimeOffset Timestamp => this.timestamp;
     }
 }

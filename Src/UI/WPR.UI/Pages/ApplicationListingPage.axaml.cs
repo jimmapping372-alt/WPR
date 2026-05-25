@@ -57,6 +57,15 @@ namespace WPR.UI.Pages
             vm.EditRequested += OnAppEditRequested;
 
             this.Get<Button>("addNewAppButton").Click += AddNewAppButton_Click;
+
+            var appListBox = this.Get<ListBox>("appListBox");
+            appListBox.DoubleTapped += (_, _) =>
+            {
+                if (ViewModel?.ChoosenApp != null)
+                {
+                    ApplicationLaunchRequest.Ask(ViewModel.ChoosenApp.Model);
+                }
+            };
         }
 
         private async void OnAppEditRequested(object? sender, ApplicationItemViewModel appItem)

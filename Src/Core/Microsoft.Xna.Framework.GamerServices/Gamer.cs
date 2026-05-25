@@ -64,7 +64,7 @@ namespace Microsoft.Xna.Framework.GamerServices
 
         public override string ToString()
         {
-            throw new NotImplementedException();
+            return Gamertag;
         }
 
         public static IAsyncResult BeginGetPartnerToken(

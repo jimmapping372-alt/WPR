@@ -362,6 +362,7 @@ namespace WPR
 #endif
 
                     GraphicsDeviceManager2.RequestOrientation = requestOrientation;
+                    GamerServicesDispatcher.WindowHandle = obj.Window.Handle;
 
                     WprTrace("[wpr-trace] ApplicationLaunch: subscribing to obj.Activated");
                     obj.Activated += (obj, args) =>
