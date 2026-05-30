@@ -1,7 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks>net8.0-windows10.0.17763.0;net8.0-android</TargetFrameworks>
     <AssemblyName>Microsoft.Xna.Framework.Game</AssemblyName>
+    <!-- RootNamespace defaults to the project name (Microsoft.Xna.Framework.Game),
+         which collides with the FNA type of the same FQN when the Android
+         workload auto-generates a Resource partial in RootNamespace
+         (obj/.../__Microsoft.Android.Resource.Designer.cs). The synthesized
+         namespace then shadows the type and CS0118 fires on the type-forwards
+         in the abi file. Setting RootNamespace explicitly avoids the collision
+         without changing the assembly identity. -->
+    <RootNamespace>WPR.XnaFacades.Game</RootNamespace>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <Nullable>enable</Nullable>
   </PropertyGroup>
