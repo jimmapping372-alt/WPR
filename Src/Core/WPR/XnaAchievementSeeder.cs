@@ -5,130 +5,167 @@ using System.Threading.Tasks;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Xna.Framework.GamerServices;
-using Microsoft.Xna.Framework.GamerServices.TrueAchievements;
 
 using WPR.Common;
+using WPR.Models;
 
 namespace WPR
 {
     /// <summary>
-    /// Install-time pass that pre-populates the local achievements DB. Pulls
-    /// rich entries from <see cref="XnaAchievementCodeExtractor.ExtractRich"/>
-    /// (which prefers the XNA XML catalogue under <c>Content/xml/</c> when
-    /// available, with IL literals / asset filenames as fallbacks), then
-    /// optionally enriches with TrueAchievements scraper metadata for any
-    /// entry whose description / icon is still empty.
+    /// Populates / keeps in sync the local achievements DB from the committed,
+    /// hardcoded catalogue (<see cref="HardcodedAchievementCatalogue"/>) — the sole
+    /// source of achievements. No network, no scanning of game assemblies: a game
+    /// only gets achievements if it ships a catalogue under
+    /// <c>Database/Achievements/&lt;productId&gt;/</c>.
     ///
-    /// Every row is persisted with <c>IsEarned = false</c> so the WPR UI can
-    /// show the full locked list immediately after install. At runtime,
-    /// <see cref="SignedInGamer.BeginAwardAchievement"/> flips the row keyed
-    /// by <c>OwnProductId + Key</c> when the game unlocks.
+    /// Reconciliation is <b>non-destructive</b>: new entries are inserted with
+    /// <c>IsEarned = false</c>, changed metadata (name / description / score / icon)
+    /// is updated in place, and unlock state (<c>IsEarned</c> / <c>EarnedDateTime</c>
+    /// / <c>EarnedOnline</c>) is never touched. Safe to run at every install and at
+    /// every startup. At runtime <see cref="SignedInGamer.BeginAwardAchievement"/>
+    /// flips the row keyed by <c>OwnProductId + Key</c> when the game unlocks.
     /// </summary>
     public static class XnaAchievementSeeder
     {
-        public static async Task SeedAsync(string productId, string appName, string installFolder)
+        /// <summary>
+        /// Autofill / reconcile a single product's achievements at install time.
+        /// </summary>
+        public static async Task SeedAsync(string productId, string appName)
         {
             if (string.IsNullOrEmpty(productId)) return;
-
             try
             {
-                bool alreadySeeded = await AchievementContext.Current.Achievements!
-                    .AnyAsync(a => a.OwnProductId == productId);
-                if (alreadySeeded)
+                await ReconcileAsync(productId, appName, HardcodedAchievementCatalogue.Load(productId));
+            }
+            catch (Exception ex)
+            {
+                Log.Warn(LogCategory.AppInstall,
+                    $"XnaAchievementSeeder: seed failed for '{appName}' ({productId}): {ex}");
+            }
+        }
+
+        /// <summary>
+        /// Re-check every installed product that ships a hardcoded catalogue against
+        /// it, applying additions / metadata changes without resetting unlock
+        /// progress. Runs at startup so catalogue updates reach already-installed
+        /// games with no reinstall.
+        /// </summary>
+        public static async Task ReconcileCatalogueGamesAsync()
+        {
+            try
+            {
+                IReadOnlyList<string> catalogueIds = HardcodedAchievementCatalogue.ProductIds();
+                if (catalogueIds.Count == 0) return;
+
+                Dictionary<string, string> installed;
+                try
                 {
-                    Log.Info(LogCategory.AppInstall,
-                        $"XnaAchievementSeeder: '{appName}' ({productId}) already has achievements rows; skipping.");
+                    installed = (await ApplicationContext.Current.Applications!.AsNoTracking().ToListAsync())
+                        .GroupBy(a => a.ProductId.Trim('{').Trim('}'), StringComparer.OrdinalIgnoreCase)
+                        .ToDictionary(g => g.Key, g => g.First().Name, StringComparer.OrdinalIgnoreCase);
+                }
+                catch (Exception ex)
+                {
+                    Log.Warn(LogCategory.Startup,
+                        $"XnaAchievementSeeder: cannot read installed apps for reconcile: {ex.Message}");
                     return;
                 }
 
-                List<XnaAchievementEntry> entries;
-                try { entries = XnaAchievementCodeExtractor.ExtractRich(installFolder, productId); }
-                catch (Exception ex)
+                foreach (string productId in catalogueIds)
                 {
-                    Log.Warn(LogCategory.AppInstall,
-                        $"XnaAchievementSeeder: extractor threw for '{appName}': {ex.Message}");
-                    entries = new List<XnaAchievementEntry>();
+                    // Only reconcile games the user actually has installed; leave
+                    // catalogues for absent games alone.
+                    if (!installed.TryGetValue(productId, out string? appName)) continue;
+                    await ReconcileAsync(productId, appName ?? productId,
+                        HardcodedAchievementCatalogue.Load(productId));
                 }
+            }
+            catch (Exception ex)
+            {
+                Log.Warn(LogCategory.Startup,
+                    $"XnaAchievementSeeder: catalogue reconcile pass failed: {ex}");
+            }
+        }
 
+        /// <summary>
+        /// Upserts <paramref name="desired"/> into the DB for the product, preserving
+        /// earned state. Inserts missing rows, updates changed metadata, deletes
+        /// nothing.
+        /// </summary>
+        private static async Task ReconcileAsync(string productId, string appName, List<HardcodedAchievement> desired)
+        {
+            productId = productId.Trim('{').Trim('}');
+            if (desired.Count == 0)
+            {
                 Log.Info(LogCategory.AppInstall,
-                    $"XnaAchievementSeeder: extracted {entries.Count} achievement(s) from " +
-                    $"'{appName}' ({productId})'s install folder.");
+                    $"XnaAchievementSeeder: no catalogue for '{appName}' ({productId}); nothing to reconcile.");
+                return;
+            }
 
-                // Optional: TrueAchievements scrape, used only as a metadata
-                // backfill for entries whose description / icon is still empty
-                // (i.e. came from the IL or folder fallbacks rather than the
-                // XML catalogue). When the XML catalogue source already gave
-                // us descriptions, this is harmless redundancy.
-                AchievementCollection scraped;
-                try { scraped = await Scraper.QueryAchievements(productId); }
-                catch (Exception ex)
+            List<Achievement> existing = await AchievementContext.Current.Achievements!
+                .Where(a => a.OwnProductId == productId)
+                .ToListAsync();
+            Dictionary<string, Achievement> byKey = existing
+                .Where(a => !string.IsNullOrEmpty(a.Key))
+                .GroupBy(a => a.Key, StringComparer.Ordinal)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+
+            int inserted = 0, updated = 0;
+            foreach (HardcodedAchievement d in desired)
+            {
+                if (byKey.TryGetValue(d.Key, out Achievement? row))
                 {
-                    Log.Warn(LogCategory.AppInstall,
-                        $"XnaAchievementSeeder: scraper threw for '{appName}': {ex.Message}");
-                    scraped = new AchievementCollection();
-                }
-
-                var scrapedByKey = scraped
-                    .Where(s => !string.IsNullOrEmpty(s.Key))
-                    .GroupBy(s => s.Key, StringComparer.OrdinalIgnoreCase)
-                    .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
-
-                var rows = new List<Achievement>();
-                foreach (var entry in entries)
-                {
-                    string name = entry.Name;
-                    string desc = entry.Description;
-                    string icon = entry.IconFilenameStem != null
-                        ? $"Content/Achievements/{entry.IconFilenameStem}.png"
-                        : string.Empty;
-                    int score = 0;
-
-                    // Backfill from scraper if the XML didn't give us those
-                    // fields. Match by Key — scraper-side keys may be display
-                    // names while ours are canonical ids, so this is best-
-                    // effort and often a no-match.
-                    if (scrapedByKey.TryGetValue(entry.Key, out var s))
+                    // Metadata only — never IsEarned / EarnedDateTime / EarnedOnline.
+                    bool changed = false;
+                    if (row.Name != d.Name) { row.Name = d.Name; changed = true; }
+                    if (row.Description != d.Description) { row.Description = d.Description; changed = true; }
+                    if (row.HowToEarn != d.Description) { row.HowToEarn = d.Description; changed = true; }
+                    if (row.GamerScore != d.GamerScore) { row.GamerScore = d.GamerScore; changed = true; }
+                    // Only overwrite the icon when the catalogue actually supplies one.
+                    if (!string.IsNullOrEmpty(d.IconRelativePath) && row._IconPath != d.IconRelativePath)
                     {
-                        if (string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(s.Name)) name = s.Name;
-                        if (string.IsNullOrEmpty(desc) && !string.IsNullOrEmpty(s.Description)) desc = s.Description;
-                        if (string.IsNullOrEmpty(icon) && !string.IsNullOrEmpty(s._IconPath)) icon = s._IconPath;
-                        if (score == 0 && s.GamerScore > 0) score = s.GamerScore;
+                        row._IconPath = d.IconRelativePath; changed = true;
                     }
-
-                    rows.Add(new Achievement
+                    if (changed) updated++;
+                }
+                else
+                {
+                    AchievementContext.Current.Achievements!.Add(new Achievement
                     {
                         OwnProductId = productId,
-                        Key = entry.Key,
-                        Name = string.IsNullOrEmpty(name) ? entry.Key : name,
-                        Description = desc ?? string.Empty,
-                        HowToEarn = desc ?? string.Empty,
-                        _IconPath = icon,
-                        GamerScore = score,
+                        Key = d.Key,
+                        Name = d.Name,
+                        Description = d.Description,
+                        HowToEarn = d.Description,
+                        _IconPath = d.IconRelativePath,
+                        GamerScore = d.GamerScore,
                         DisplayBeforeEarned = true,
                         IsEarned = false,
                         EarnedOnline = false,
                         EarnedDateTime = DateTime.MinValue,
                     });
+                    inserted++;
                 }
-
-                if (rows.Count == 0)
-                {
-                    Log.Info(LogCategory.AppInstall,
-                        $"XnaAchievementSeeder: nothing to seed for '{appName}' ({productId}).");
-                    return;
-                }
-
-                await AchievementContext.Current.Achievements!.AddRangeAsync(rows);
-                await AchievementContext.Current.SaveChangesAsync();
-
-                Log.Info(LogCategory.AppInstall,
-                    $"XnaAchievementSeeder: seeded {rows.Count} achievement(s) for '{appName}' ({productId}).");
             }
-            catch (Exception ex)
+
+            // Remove stale rows whose Key is no longer in the catalogue. The
+            // catalogue is authoritative for a curated game, so a corrected/removed
+            // key must not leave an orphan row behind (a wrong key can crash games
+            // that index their own asset map by achievement key). Earned state for
+            // keys that still exist is preserved by the upsert above.
+            var desiredKeys = new HashSet<string>(desired.Select(d => d.Key), StringComparer.Ordinal);
+            List<Achievement> stale = existing.Where(a => !desiredKeys.Contains(a.Key)).ToList();
+            int removed = stale.Count;
+            if (removed > 0) AchievementContext.Current.Achievements!.RemoveRange(stale);
+
+            if (inserted > 0 || updated > 0 || removed > 0)
             {
-                Log.Warn(LogCategory.AppInstall,
-                    $"XnaAchievementSeeder: unexpected failure for '{appName}' ({productId}): {ex}");
+                await AchievementContext.Current.SaveChangesAsync();
             }
+
+            Log.Info(LogCategory.AppInstall,
+                $"XnaAchievementSeeder: '{appName}' ({productId}) reconciled — {removed} removed, " +
+                $"{inserted} added, {updated} updated, {existing.Count} existing.");
         }
     }
 }

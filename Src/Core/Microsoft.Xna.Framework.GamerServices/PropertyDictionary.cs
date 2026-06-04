@@ -40,6 +40,12 @@ namespace Microsoft.Xna.Framework.GamerServices
             PropertyValue propertyValue;
             if (this.properties.TryGetValue(key, out propertyValue))
                 return propertyValue;
+            // Honor demandCreate: the original ignored it and returned null, so the
+            // first write of any not-yet-present key NRE'd in SetValue/SetTypedValue
+            // (property.IsChanged on null) — which crashed games that set a fresh
+            // property during gameplay (e.g. Fruit Ninja on an achievement unlock).
+            if (demandCreate)
+                return this.Add(key, new ObjectPropertyValue());
             return null;
         }
 

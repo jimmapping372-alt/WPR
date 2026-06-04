@@ -222,6 +222,19 @@ namespace WPR.UI.Android
 
             Filesystem.CopyFolderFromAssets(Assets!, "Database/TrueAchievements",
                 Path.Combine(databaseDir, "TrueAchievements"));
+
+            // Hardcoded achievement catalogues (manifest + icon PNGs), one folder
+            // per product. Recursive copy handles the per-product subfolders.
+            Filesystem.CopyFolderFromAssets(Assets!, "Database/Achievements",
+                Path.Combine(databaseDir, "Achievements"));
+
+            // Reconcile installed games against their catalogues (non-destructive;
+            // never resets unlock progress). Non-fatal.
+            try { WPR.XnaAchievementSeeder.ReconcileCatalogueGamesAsync().GetAwaiter().GetResult(); }
+            catch (Exception ex)
+            {
+                WPR.Common.Log.Warn(LogCategory.Startup, $"Startup achievement reconcile failed (non-fatal): {ex.Message}");
+            }
         }
 
         protected override void OnCreate(Bundle? savedInstanceState)
@@ -232,7 +245,10 @@ namespace WPR.UI.Android
 
             MessageBoxUtils.MainActivity = this;
             ServicesSetup.Start();
-            NativeUI.Initialize(this);
+            // Android toast notifications are staged but not wired up yet. The
+            // implementation lives in Notifications/AndroidNotificationManager.cs;
+            // enable it by uncommenting the line below.
+            // NativeUI.NotificationManager = new global::DesktopNotifications.Android.AndroidNotificationManager(this);
             SetupDllPatchForCecil();
 
             ActivitySpawner = RegisterForActivityResult(new ActivityResultContracts.StartActivityForResult(),

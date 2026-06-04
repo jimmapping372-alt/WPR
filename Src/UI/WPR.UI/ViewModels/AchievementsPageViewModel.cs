@@ -9,6 +9,7 @@ using Avalonia.Threading;
 using Microsoft.EntityFrameworkCore;
 using ReactiveUI;
 
+using WPR;
 using Microsoft.Xna.Framework.GamerServices;
 using WPR.Common;
 using WPR.Models;
@@ -61,7 +62,7 @@ namespace WPR.UI.ViewModels
             _ = LoadAsync();
         }
 
-        public async Task LoadAsync()
+        public async Task LoadAsync(string? selectProductId = null)
         {
             IsLoading = true;
             try
@@ -99,7 +100,9 @@ namespace WPR.UI.ViewModels
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     Games = new ObservableCollection<AchievementGameItemViewModel>(grouped);
-                    SelectedGame = grouped.FirstOrDefault();
+                    SelectedGame = (selectProductId != null
+                        ? grouped.FirstOrDefault(g => g.ProductId == selectProductId)
+                        : null) ?? grouped.FirstOrDefault();
                 });
             }
             catch (Exception ex)

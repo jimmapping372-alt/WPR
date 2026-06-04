@@ -21,12 +21,6 @@
     <PackageReference Include="Xamarin.Essentials" Version="1.7.3" />
   </ItemGroup>
 
-  <ItemGroup>
-	<ProjectReference Condition="'$(TargetFramework)' == 'net8.0-android'" Include="$(SolutionDir)\ThirdParty\DesktopNotifications\DesktopNotifications.Android\DesktopNotifications.Android.csproj" />
-    <ProjectReference Include="$(SolutionDir)\ThirdParty\DesktopNotifications\DesktopNotifications.Windows\DesktopNotifications.Windows.csproj" />
-    <ProjectReference Include="$(SolutionDir)\ThirdParty\DesktopNotifications\DesktopNotifications\DesktopNotifications.csproj" />
-  </ItemGroup>
-
   <!-- Default gamer-picture choices (the 9 stock WP7 avatars). Lives at the
        solution root in Src\GamerPictures\; embedded here so both the settings
        UI (thumbnail strip) and GamerServices (GamerProfile.GetGamerPicture)

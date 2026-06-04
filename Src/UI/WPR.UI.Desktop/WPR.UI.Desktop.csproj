@@ -12,6 +12,20 @@
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <OutputType>WinExe</OutputType>
   </PropertyGroup>
+
+  <!-- Notification impl (moved from the old DesktopNotifications.Windows project).
+       On the Windows TFM the real WinRT toast manager compiles; on the net8.0
+       (non-Windows) leg only the null implementation does. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows10.0.17763.0'">
+    <Compile Remove="Notifications\NullImpl_WindowsNotificationManager.cs" />
+    <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0-windows10.0.17763.0'">
+    <Compile Remove="Notifications\ShellLink.cs" />
+    <Compile Remove="Notifications\WindowsNotificationManager.cs" />
+    <Compile Remove="Notifications\WindowsApplicationContext.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <None Update="FAudio.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

@@ -1187,7 +1187,12 @@ namespace Microsoft.Xna.Framework
 					// Window Focus
 					if (evt.window.windowEvent == SDL.SDL_WindowEventID.SDL_WINDOWEVENT_FOCUS_GAINED)
 					{
-						game.IsActive = true;
+						// WPR: ignore the focus blip our own achievement toast causes, so the
+						// game isn't deactivated/reactivated mid-tick on an unlock.
+						if (!WprActivationGuard.IsSuppressed)
+						{
+							game.IsActive = true;
+						}
 
 						if (SDL.SDL_GetCurrentVideoDriver() == "x11")
 						{
@@ -1212,8 +1217,18 @@ namespace Microsoft.Xna.Framework
 						// post-BeforeLoop OnActivated fire-once handles initial activation; this
 						// handles every subsequent background/foreground transition on desktop
 						// and Android (SDL maps app lifecycle to FOCUS_LOST/GAINED on both).
-						WprDebugTrace.WriteLine("[wpr-trace] SDL_WINDOWEVENT_FOCUS_LOST -> IsActive=false");
-						game.IsActive = false;
+						// WPR: ignore the focus blip our own achievement toast causes (see
+						// WprActivationGuard) — otherwise an unlock fires OnDeactivated mid-tick
+						// and WP7 ports like Fruit Ninja 2013 throw in their override.
+						if (!WprActivationGuard.IsSuppressed)
+						{
+							WprDebugTrace.WriteLine("[wpr-trace] SDL_WINDOWEVENT_FOCUS_LOST -> IsActive=false");
+							game.IsActive = false;
+						}
+						else
+						{
+							WprDebugTrace.WriteLine("[wpr-trace] SDL_WINDOWEVENT_FOCUS_LOST suppressed (WPR toast)");
+						}
 
 						if (SDL.SDL_GetCurrentVideoDriver() == "x11")
 						{

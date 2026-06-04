@@ -31,17 +31,31 @@ namespace WPR.Common
 #if __ANDROID__
         public static void CopyFolderFromAssets(AssetManager assets, string sourcePath, string targetPath)
         {
-            string[]? assetFilenames = assets.List(sourcePath);
-            if ((assetFilenames == null) || (assetFilenames.Length == 0))
+            string[]? assetNames = assets.List(sourcePath);
+            if ((assetNames == null) || (assetNames.Length == 0))
             {
                 return;
             }
 
             Directory.CreateDirectory(targetPath);
 
-            foreach (string assetFilename in assetFilenames)
+            foreach (string name in assetNames)
             {
-                CopyFileFromAssets(assets, Path.Combine(sourcePath, assetFilename), Path.Combine(targetPath, assetFilename));
+                string childSource = sourcePath + "/" + name;
+                string childTarget = Path.Combine(targetPath, name);
+
+                // AssetManager.List returns children for a directory and an empty
+                // array for a file — recurse into subfolders (e.g. the per-product
+                // achievement catalogue folders) rather than trying to Open them.
+                string[]? children = assets.List(childSource);
+                if (children != null && children.Length > 0)
+                {
+                    CopyFolderFromAssets(assets, childSource, childTarget);
+                }
+                else
+                {
+                    CopyFileFromAssets(assets, childSource, childTarget);
+                }
             }
         }
 

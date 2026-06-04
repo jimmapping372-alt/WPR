@@ -29,6 +29,11 @@
       <_CopyItems Include="$(SolutionDir)Database\**\*.*" />
     </ItemGroup>
     <Copy SourceFiles="@(_CopyItems)" DestinationFolder="$(ProjectDir)\Database\%(RecursiveDir)" SkipUnchangedFiles="true" OverwriteReadOnlyFiles="true" />
+    <!-- Bundle the hardcoded achievement catalogues (manifest + icon PNGs). Added
+         here, after the copy above, so the files exist when the glob is evaluated. -->
+    <ItemGroup>
+      <AndroidAsset Include="Database\Achievements\**\*.*" />
+    </ItemGroup>
   </Target>
 
 
@@ -55,6 +60,11 @@
 
   <ItemGroup>
     <PackageReference Include="Avalonia.Android" Version="$(AvaloniaVersion)" />
+    <!-- Backs the staged Notifications/AndroidNotificationManager.cs (NotificationManagerCompat,
+         IconCompat). Kept so the file compiles even though the wiring in MainActivity is
+         currently commented out. Pinned to 1.12.0.2 to match the version Avalonia.Android
+         already pulls in transitively (a lower version triggers NU1605 downgrade-as-error). -->
+    <PackageReference Include="Xamarin.AndroidX.Core" Version="1.12.0.2" />
     <PackageReference Include="SQLitePCLRaw.provider.dynamic_cdecl" Version="2.0.6" />
     <PackageReference Include="System.ServiceModel.Http" Version="4.10.0" />
     <PackageReference Include="System.ServiceModel.Primitives" Version="4.10.0" />

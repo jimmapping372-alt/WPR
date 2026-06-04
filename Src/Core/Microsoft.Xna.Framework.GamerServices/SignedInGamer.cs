@@ -175,7 +175,6 @@ namespace Microsoft.Xna.Framework.GamerServices
 
         public AchievementCollection EndGetAchievements(IAsyncResult result)
         {
-            Log.Error(LogCategory.GamerServices, "Result!");
             Task<AchievementCollection>? collectResult = result as Task<AchievementCollection>;
             return collectResult!.GetAwaiter().GetResult();
         }
@@ -240,6 +239,13 @@ namespace Microsoft.Xna.Framework.GamerServices
 
                     try
                     {
+                        // The desktop toast momentarily steals the game window's focus, which
+                        // SDL reports as FOCUS_LOST/GAINED → FNA flips Game.IsActive →
+                        // OnDeactivated/OnActivated mid-tick. Some WP7 ports throw in those
+                        // overrides (Fruit Ninja 2013 surfaces a bogus "memory error" and exits).
+                        // Tell FNA to ignore the focus blip for a short window around the toast.
+                        WprActivationGuard.SuppressFocusActivation(TimeSpan.FromSeconds(8));
+
                         await NativeUI.NotificationManager.ShowNotification(new DesktopNotifications.Notification()
                         {
                             Title = Properties.Resources.AchievementUnlocked,

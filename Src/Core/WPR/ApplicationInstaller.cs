@@ -363,16 +363,15 @@ namespace WPR
                             app?.ProductId ?? "",
                             app?.Name ?? "");
 
-                        // XNA / GamerServices apps: extract the achievement catalogue
-                        // from the game's own assemblies / content (XML catalogue in
-                        // Content/xml/, IL string literals, asset filenames) and seed
-                        // AchievementContext with all entries marked locked. Lets the
-                        // WPR UI show the full achievement list immediately, and —
-                        // more importantly — guarantees rows exist by the time the
-                        // game calls AwardAchievement, which only flips IsEarned on
-                        // rows that are already present. Best-effort; we block on the
-                        // task so the install pipeline completes deterministically.
-                        try { XnaAchievementSeeder.SeedAsync(app?.ProductId ?? "", app?.Name ?? "", appDataFolder).GetAwaiter().GetResult(); }
+                        // XNA / GamerServices apps: seed AchievementContext from the
+                        // game's committed hardcoded catalogue (Database/Achievements/
+                        // <productId>/), all entries marked locked. Lets the WPR UI show
+                        // the full achievement list immediately, and — more importantly —
+                        // guarantees rows exist by the time the game calls AwardAchievement,
+                        // which only flips IsEarned on rows that are already present. No-op
+                        // for games without a catalogue. Best-effort; we block on the task
+                        // so the install pipeline completes deterministically.
+                        try { XnaAchievementSeeder.SeedAsync(app?.ProductId ?? "", app?.Name ?? "").GetAwaiter().GetResult(); }
                         catch (Exception ex)
                         {
                             Log.Warn(LogCategory.AppInstall, $"XnaAchievementSeeder failed (non-fatal): {ex.Message}");

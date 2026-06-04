@@ -72,6 +72,18 @@ namespace Microsoft.Xna.Framework.GamerServices
                 return ms;
             }
 
+            // Nothing configured and no in-memory picture: fall back to a bundled default
+            // avatar rather than Stream.Null. An empty stream makes Texture2D.FromStream
+            // produce a null/invalid texture, which games store and later draw — surfacing
+            // as a blank gamerpic and, for games that don't null-check (Fruit Ninja 2013),
+            // a crash on the next redraw/focus change.
+            IReadOnlyList<string> defaults = GamerPictureDefaults.Ids;
+            if (defaults.Count > 0)
+            {
+                Stream? fallback = GamerPictureDefaults.Open(defaults[0]);
+                if (fallback != null) return fallback;
+            }
+
             return Stream.Null;
         }
 
