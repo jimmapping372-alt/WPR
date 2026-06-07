@@ -18,16 +18,9 @@ jobs:
     - name: Install Android MAUI Workload
       run: dotnet workload install android
 
-    - name: Global NuGet Restore
-      run: dotnet restore Src/WPR.sln
-      # Βήμα 1: Προετοιμάζει όλες τις κοινές βιβλιοθήκες (XNA, Avalonia κ.λπ.)
-
-    - name: Target Android Restore
-      run: dotnet restore Src/UI/WPR.UI.Android/WPR.UI.Android.csproj /p:TargetFramework=net8.0-android
-      # Βήμα 2: Επιβάλλει τη δημιουργία του target 'net8.0-android' που έλειπε
-
     - name: Publish Android APK
-      run: dotnet publish Src/UI/WPR.UI.Android/WPR.UI.Android.csproj -c Release /p:TargetFramework=net8.0-android --no-restore /p:AndroidSigningKeyPass=dummy /p:AndroidSigningStorePass=dummy /p:ErrorOnMissingNativeLibs=false
+      run: dotnet publish Src/UI/WPR.UI.Android/WPR.UI.Android.csproj -c Release /p:TargetFramework=net8.0-android /p:AndroidSigningKeyPass=dummy /p:AndroidSigningStorePass=dummy /p:ErrorOnMissingNativeLibs=false
+      # Αφαιρέθηκε το --no-restore και τα ενδιάμεσα restores. Τώρα το .NET θα προετοιμάσει μόνο του όλα τα απαραίτητα κομμάτια.
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
