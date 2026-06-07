@@ -23,13 +23,12 @@ jobs:
       run: |
         find . -type d \( -name "obj" -o -name "bin" \) -exec rm -rf {} +
 
-    - name: Global Solution Restore
-      run: dotnet restore Src/WPR.sln
-      # Αυτό το βήμα κάνει σωστά restore και στα 30 projects ταυτόχρονα
+    - name: Global Solution Restore with Android Target
+      run: dotnet restore Src/WPR.sln /p:TargetFramework=net8.0-android
+      # Επιβάλλει το restore του Android target σε όλη τη δομή των 30 projects
 
     - name: Build and Publish Android APK
       run: dotnet build Src/UI/WPR.UI.Android/WPR.UI.Android.csproj -c Release -t:Publish --no-restore /p:TargetFramework=net8.0-android /p:AndroidSigningKeyPass=dummy /p:AndroidSigningStorePass=dummy /p:ErrorOnMissingNativeLibs=false
-      # Προστέθηκε το --no-restore για να κλειδώσει τις ρυθμίσεις του προηγούμενου βήματος
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
