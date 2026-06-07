@@ -19,12 +19,11 @@ jobs:
       run: dotnet workload install android
 
     - name: NuGet Restore for Android
-      run: dotnet restore Src/UI/WPR.UI.Android/WPR.UI.Android.csproj -f net8.0-android
-      # Αυτό το βήμα δημιουργεί το σωστό project.assets.json που ζητούσε το error
+      run: dotnet restore Src/UI/WPR.UI.Android/WPR.UI.Android.csproj /p:TargetFramework=net8.0-android
+      # Χρήση του σωστού MSBuild switch για να μην μπερδεύεται ο server
 
     - name: Publish Android APK
-      run: dotnet publish Src/UI/WPR.UI.Android/WPR.UI.Android.csproj -c Release -f net8.0-android --no-restore /p:AndroidSigningKeyPass=dummy /p:AndroidSigningStorePass=dummy /p:ErrorOnMissingNativeLibs=false
-      # Το --no-restore χρησιμοποιεί το έτοιμο αρχείο από το προηγούμενο βήμα
+      run: dotnet publish Src/UI/WPR.UI.Android/WPR.UI.Android.csproj -c Release /p:TargetFramework=net8.0-android --no-restore /p:AndroidSigningKeyPass=dummy /p:AndroidSigningStorePass=dummy /p:ErrorOnMissingNativeLibs=false
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
