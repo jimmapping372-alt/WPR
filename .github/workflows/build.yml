@@ -18,9 +18,19 @@ jobs:
     - name: Install Android MAUI Workload
       run: dotnet workload install android
 
-    - name: Publish Android APK
-      run: dotnet publish Src/UI/WPR.UI.Android/WPR.UI.Android.csproj -c Release /p:TargetFramework=net8.0-android /p:AndroidSigningKeyPass=dummy /p:AndroidSigningStorePass=dummy /p:ErrorOnMissingNativeLibs=false
-      # Αφαιρέθηκε το --no-restore και τα ενδιάμεσα restores. Τώρα το .NET θα προετοιμάσει μόνο του όλα τα απαραίτητα κομμάτια.
+    - name: Clean Old Build Artifacts
+      shell: bash
+      run: |
+        find . -type d \( -name "obj" -o -name "bin" \) -exec rm -rf {} +
+      # Διαγράφει βίαια κάθε κολλημένο αρχείο project.assets.json για να ξεκινήσει καθαρό restore
+
+    - name: Global Solution Restore
+      run: dotnet restore Src/WPR.sln
+      # Κάνει restore σε όλο το solution ταυτόχρονα (XNA, Avalonia, Android)
+
+    - name: Build and Publish Android APK
+      run: dotnet build Src/UI/WPR.UI.Android/WPR.UI.Android.csproj -c Release -t:Publish /p:TargetFramework=net8.0-android /p:AndroidSigningKeyPass=dummy /p:AndroidSigningStorePass=dummy /p:ErrorOnMissingNativeLibs=false
+      # Χρησιμοποιούμε dotnet build -t:Publish που παρακάμπτει το bug του dotnet publish
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
