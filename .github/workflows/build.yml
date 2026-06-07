@@ -22,15 +22,14 @@ jobs:
       shell: bash
       run: |
         find . -type d \( -name "obj" -o -name "bin" \) -exec rm -rf {} +
-      # Διαγράφει βίαια κάθε κολλημένο αρχείο project.assets.json για να ξεκινήσει καθαρό restore
 
     - name: Global Solution Restore
       run: dotnet restore Src/WPR.sln
-      # Κάνει restore σε όλο το solution ταυτόχρονα (XNA, Avalonia, Android)
+      # Αυτό το βήμα κάνει σωστά restore και στα 30 projects ταυτόχρονα
 
     - name: Build and Publish Android APK
-      run: dotnet build Src/UI/WPR.UI.Android/WPR.UI.Android.csproj -c Release -t:Publish /p:TargetFramework=net8.0-android /p:AndroidSigningKeyPass=dummy /p:AndroidSigningStorePass=dummy /p:ErrorOnMissingNativeLibs=false
-      # Χρησιμοποιούμε dotnet build -t:Publish που παρακάμπτει το bug του dotnet publish
+      run: dotnet build Src/UI/WPR.UI.Android/WPR.UI.Android.csproj -c Release -t:Publish --no-restore /p:TargetFramework=net8.0-android /p:AndroidSigningKeyPass=dummy /p:AndroidSigningStorePass=dummy /p:ErrorOnMissingNativeLibs=false
+      # Προστέθηκε το --no-restore για να κλειδώσει τις ρυθμίσεις του προηγούμενου βήματος
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
