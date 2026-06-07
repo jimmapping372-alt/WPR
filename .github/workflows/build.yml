@@ -1,0 +1,40 @@
+name: WPR Android Custom Build
+on: workflow_dispatch
+
+jobs:
+  build-android:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+      with:
+        submodules: 'recursive' # Κατεβάζει αυτόματα τα απαραίτητα submodules του WPR
+
+    - name: Setup .NET 8.0
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Install Android MAUI Workload
+      run: dotnet workload install android
+
+    - name: Setup Android NDK and CMake
+      uses: android-actions/setup-android@v3
+      # Αυτό εγκαθιστά τα εργαλεία για να γίνει compile το WPRNativeBuild
+
+    - name: Build Native Libraries
+      shell: cmd
+      run: |
+        cd Src/UI/WPRNativeBuild
+        call build.bat
+        # Εκτελεί το script του δημιουργού για τις C++ βιβλιοθήκες
+
+    - name: Publish Android APK
+      run: dotnet publish Src/UI/WPR.UI.Android/WPR.UI.Android.csproj -c Release -f net8.0-android /p:AndroidSigningKeyPass=dummy /p:AndroidSigningStorePass=dummy
+      # Δημιουργεί το τελικό APK της εφαρμογής
+
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: WPR-Android-App
+        path: Src/UI/WPR.UI.Android/bin/Release/net8.0-android/*-Signed.apk
