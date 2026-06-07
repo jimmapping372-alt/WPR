@@ -18,19 +18,13 @@ jobs:
     - name: Install Android MAUI Workload
       run: dotnet workload install android
 
-    - name: Download Prebuilt Native Libraries
-      shell: bash
-      run: |
-        mkdir -p Src/UI/WPR.UI.Android/Libraries/arm64-v8a
-        mkdir -p Src/UI/WPR.UI.Android/Libraries/armeabi-v7a
-        mkdir -p Src/UI/WPR.UI.Android/Libraries/x86_64
-        
-        # Λήψη των απαραίτητων έτοιμων .so βιβλιοθηκών από το ffmpeg-kit (παράδειγμα nightly)
-        curl -L https://github.com -o libs.zip || true
-        # Σημείωση: Αν ο δημιουργός δεν έχει release εκεί, το .NET θα προσπαθήσει να κάνει build χωρίς αυτά.
+    - name: NuGet Restore for Android
+      run: dotnet restore Src/UI/WPR.UI.Android/WPR.UI.Android.csproj -f net8.0-android
+      # Αυτό το βήμα δημιουργεί το σωστό project.assets.json που ζητούσε το error
 
     - name: Publish Android APK
-      run: dotnet publish Src/UI/WPR.UI.Android/WPR.UI.Android.csproj -c Release -f net8.0-android /p:AndroidSigningKeyPass=dummy /p:AndroidSigningStorePass=dummy /p:ErrorOnMissingNativeLibs=false
+      run: dotnet publish Src/UI/WPR.UI.Android/WPR.UI.Android.csproj -c Release -f net8.0-android --no-restore /p:AndroidSigningKeyPass=dummy /p:AndroidSigningStorePass=dummy /p:ErrorOnMissingNativeLibs=false
+      # Το --no-restore χρησιμοποιεί το έτοιμο αρχείο από το προηγούμενο βήμα
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
