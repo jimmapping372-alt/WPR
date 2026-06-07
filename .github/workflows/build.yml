@@ -18,9 +18,9 @@ jobs:
     - name: Install Android MAUI Workload
       run: dotnet workload install android
 
-    - name: NuGet Restore for Android
-      run: dotnet restore Src/UI/WPR.UI.Android/WPR.UI.Android.csproj /p:TargetFramework=net8.0-android
-      # Χρήση του σωστού MSBuild switch για να μην μπερδεύεται ο server
+    - name: Global NuGet Restore
+      run: dotnet restore WPR.sln
+      # Αυτό προετοιμάζει ΟΛΑ τα projects (XNA, Avalonia, Android) ταυτόχρονα για να μη λείπει καμία ρύθμιση
 
     - name: Publish Android APK
       run: dotnet publish Src/UI/WPR.UI.Android/WPR.UI.Android.csproj -c Release /p:TargetFramework=net8.0-android --no-restore /p:AndroidSigningKeyPass=dummy /p:AndroidSigningStorePass=dummy /p:ErrorOnMissingNativeLibs=false
